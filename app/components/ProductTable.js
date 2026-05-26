@@ -1,5 +1,6 @@
 'use client'
 import { useState, useMemo } from 'react'
+import Image from 'next/image'
 
 const PRODUCTS = [
   {
@@ -10,10 +11,13 @@ const PRODUCTS = [
     origin: 'US',
     containerCost: 28.00,
     doseDescription: '5ml',
+    standardDosage: null,
     algMg: 425,
     doses: 47,
     costPerDose: 0.60,
-    amazonUrl: null,
+    buyLinks: [],
+    productUrl: null,
+    image: null,
   },
   {
     id: 2,
@@ -23,10 +27,13 @@ const PRODUCTS = [
     origin: 'US',
     containerCost: 32.00,
     doseDescription: '5ml',
+    standardDosage: null,
     algMg: 425,
     doses: 25,
     costPerDose: 1.28,
-    amazonUrl: 'https://a.co/d/bnGGaDH',
+    buyLinks: [{ label: 'Amazon', url: 'https://a.co/d/bnGGaDH' }],
+    productUrl: null,
+    image: null,
   },
   {
     id: 3,
@@ -36,10 +43,13 @@ const PRODUCTS = [
     origin: 'US',
     containerCost: 33.00,
     doseDescription: '5ml',
+    standardDosage: null,
     algMg: 245,
     doses: 47,
     costPerDose: 0.70,
-    amazonUrl: 'https://a.co/d/7TYqIHg',
+    buyLinks: [{ label: 'Amazon', url: 'https://a.co/d/7TYqIHg' }],
+    productUrl: null,
+    image: null,
   },
   {
     id: 4,
@@ -49,10 +59,13 @@ const PRODUCTS = [
     origin: 'UK import',
     containerCost: 19.00,
     doseDescription: '1 tablet',
+    standardDosage: null,
     algMg: 500,
     doses: 60,
     costPerDose: 0.37,
-    amazonUrl: 'https://a.co/d/cdQMvXD',
+    buyLinks: [{ label: 'Amazon', url: 'https://a.co/d/cdQMvXD' }],
+    productUrl: null,
+    image: null,
   },
   {
     id: 5,
@@ -62,10 +75,13 @@ const PRODUCTS = [
     origin: 'UK import',
     containerCost: 29.49,
     doseDescription: '1 tablet',
+    standardDosage: null,
     algMg: 500,
     doses: 120,
     costPerDose: 0.25,
-    amazonUrl: 'https://a.co/d/cdQMvXD',
+    buyLinks: [{ label: 'Amazon', url: 'https://a.co/d/cdQMvXD' }],
+    productUrl: null,
+    image: null,
   },
   {
     id: 6,
@@ -75,10 +91,13 @@ const PRODUCTS = [
     origin: 'UK import',
     containerCost: 12.00,
     doseDescription: '2 tablets',
+    standardDosage: null,
     algMg: 500,
     doses: 24,
     costPerDose: 0.50,
-    amazonUrl: 'https://a.co/d/5wzAVE6',
+    buyLinks: [{ label: 'Amazon', url: 'https://a.co/d/5wzAVE6' }],
+    productUrl: null,
+    image: null,
   },
   {
     id: 7,
@@ -88,10 +107,13 @@ const PRODUCTS = [
     origin: 'UK import',
     containerCost: 52.00,
     doseDescription: '10ml',
+    standardDosage: null,
     algMg: 500,
     doses: 60,
     costPerDose: 0.86,
-    amazonUrl: 'https://a.co/d/dpRogZa',
+    buyLinks: [{ label: 'Amazon', url: 'https://a.co/d/dpRogZa' }],
+    productUrl: null,
+    image: null,
   },
   {
     id: 8,
@@ -101,19 +123,69 @@ const PRODUCTS = [
     origin: 'UK import',
     containerCost: 71.00,
     doseDescription: '5ml',
+    standardDosage: null,
     algMg: 500,
     doses: 100,
     costPerDose: 0.71,
-    amazonUrl: 'https://a.co/d/1NyKegT',
+    buyLinks: [{ label: 'Amazon', url: 'https://a.co/d/1NyKegT' }],
+    productUrl: null,
+    image: null,
   },
 ]
 
 const SORT_COLS = [
   { key: 'algMg', label: 'Alginate/dose' },
-  { key: 'containerCost', label: 'Container price' },
+  { key: 'containerCost', label: 'Container' },
   { key: 'doses', label: 'Doses' },
   { key: 'costPerDose', label: '$/dose' },
 ]
+
+function ProductThumb({ image, name }) {
+  const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  if (image) {
+    return (
+      <div className="relative w-12 h-12 shrink-0 rounded overflow-hidden border border-gray-100">
+        <Image src={`/images/${image}`} alt={name} fill className="object-contain" sizes="48px" />
+      </div>
+    )
+  }
+  return (
+    <div className="w-12 h-12 shrink-0 rounded bg-gray-100 border border-gray-100 flex items-center justify-center text-xs font-bold text-gray-400 select-none">
+      {initials}
+    </div>
+  )
+}
+
+function BuyButtons({ buyLinks, productUrl }) {
+  if (!buyLinks.length && !productUrl) {
+    return <span className="text-gray-300 text-xs">—</span>
+  }
+  return (
+    <div className="flex flex-col gap-1.5 items-center">
+      {buyLinks.map((link, i) => (
+        <a
+          key={i}
+          href={link.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block bg-amber-400 hover:bg-amber-500 text-gray-900 text-xs font-semibold px-3 py-1.5 rounded transition-colors whitespace-nowrap"
+        >
+          {link.label} →
+        </a>
+      ))}
+      {productUrl && (
+        <a
+          href={productUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-teal-600 hover:text-teal-800 hover:underline"
+        >
+          Product site ↗
+        </a>
+      )}
+    </div>
+  )
+}
 
 export default function ProductTable() {
   const [filter, setFilter] = useState('all')
@@ -197,19 +269,29 @@ export default function ProductTable() {
                   className={`border-b border-gray-100 last:border-0 ${isBest ? 'bg-green-50' : 'hover:bg-slate-50'}`}
                 >
                   <td className="px-4 py-3">
-                    <div className="font-medium text-gray-900">{p.name}</div>
-                    <div className="text-gray-500 text-xs mt-0.5">{p.variant}</div>
-                    <span className={`text-xs px-1.5 py-0.5 rounded mt-1 inline-block font-medium ${
-                      p.origin === 'US'
-                        ? 'bg-blue-50 text-blue-600'
-                        : 'bg-orange-50 text-orange-600'
-                    }`}>
-                      {p.origin}
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <ProductThumb image={p.image} name={p.name} />
+                      <div>
+                        <div className="font-medium text-gray-900">{p.name}</div>
+                        <div className="text-gray-500 text-xs mt-0.5">{p.variant}</div>
+                        <span className={`text-xs px-1.5 py-0.5 rounded mt-1 inline-block font-medium ${
+                          p.origin === 'US'
+                            ? 'bg-blue-50 text-blue-600'
+                            : 'bg-orange-50 text-orange-600'
+                        }`}>
+                          {p.origin}
+                        </span>
+                      </div>
+                    </div>
                   </td>
-                  <td className="px-4 py-3 text-gray-600 hidden sm:table-cell capitalize">{p.form}</td>
-                  <td className="px-4 py-3 text-right text-gray-700 hidden md:table-cell">
-                    {p.algMg}mg
+                  <td className="px-4 py-3 hidden sm:table-cell">
+                    <div className="text-gray-600 capitalize">{p.form}</div>
+                    {p.standardDosage && (
+                      <div className="text-xs text-gray-400 mt-0.5">{p.standardDosage}</div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-right hidden md:table-cell">
+                    <div className="text-gray-700">{p.algMg}mg</div>
                     <div className="text-xs text-gray-400">{p.doseDescription}</div>
                   </td>
                   <td className="px-4 py-3 text-right text-gray-700 hidden md:table-cell">${p.containerCost.toFixed(2)}</td>
@@ -223,18 +305,7 @@ export default function ProductTable() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-center">
-                    {p.amazonUrl ? (
-                      <a
-                        href={p.amazonUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-block bg-amber-400 hover:bg-amber-500 text-gray-900 text-xs font-semibold px-3 py-1.5 rounded transition-colors"
-                      >
-                        Amazon →
-                      </a>
-                    ) : (
-                      <span className="text-gray-300 text-xs">—</span>
-                    )}
+                    <BuyButtons buyLinks={p.buyLinks} productUrl={p.productUrl} />
                   </td>
                 </tr>
               )
