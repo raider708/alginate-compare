@@ -24,10 +24,11 @@ The site earns affiliate commission by linking to Amazon (and eventually other r
 
 ## Data source
 
-Currently **hardcoded** in `app/components/ProductTable.js`. Sourced from the user's Google Sheet:
-`https://docs.google.com/spreadsheets/d/1ogEg7jDV9SxR-rJUzMAjxbAuohxTVUNFlymoKtBse30`
+**Live:** Google Sheet published CSV, fetched server-side (ISR, revalidated every hour).
+Sheet: `https://docs.google.com/spreadsheets/d/1ogEg7jDV9SxR-rJUzMAjxbAuohxTVUNFlymoKtBse30`
+CSV URL stored in `.env.local` as `SHEET_CSV_URL`.
 
-**Phase 2 goal:** Switch to Google Sheets API (read-only, ISR revalidation every 24h) so the user can update prices in the spreadsheet and the site auto-reflects them. This requires making the sheet publicly viewable and getting a Google API key.
+Fetching logic is in `app/lib/getProducts.js`. If the sheet is unreachable or `SHEET_CSV_URL` is unset, the app falls back to hardcoded data in `FALLBACK_PRODUCTS`. Add/edit rows in the sheet and the site reflects them within an hour (instant in dev with `cache: 'no-store'`).
 
 ---
 
@@ -35,21 +36,28 @@ Currently **hardcoded** in `app/components/ProductTable.js`. Sourced from the us
 
 ```js
 {
-  id, name, variant, form,          // form: 'liquid' | 'tablet'
-  origin,                            // 'US' | 'UK import'
-  containerCost, doseDescription,
-  standardDosage,                    // null — user will fill from product docs
-  algMg, doses, costPerDose,
-  buyLinks: [{ label, url }],        // supports multiple retailers
-  productUrl,                        // null — user will fill in manufacturer URLs
-  image,                             // null — filename in /public/images/ when added
+  id, name, variant, form,           // form: 'liquid' | 'tablet'
+  origin,                             // 'US' | 'UK import'
+  containerCost,                      // Amazon package price
+  standardDosage,                     // e.g. "5ml", "2 tablets" — from product docs
+  algMg, doses,
+  costPerDose,                        // BEST price across all retailers (used for sorting)
+  buyLinks: [{ label, url, packagePrice, costPerDose }],  // per-retailer; packagePrice/costPerDose null if not yet known
+  note,                               // freeform editorial note shown on the site
+  image,                              // filename in /public/images/
 }
 ```
 
+**Live data source:** Google Sheet published CSV, fetched server-side, revalidated every hour.
+Sheet columns (0-indexed):
+- 0:Name, 1:Package Size, 2:Form, 3:Origin, 4:Standard Dosage, 5:Alginate mg, 6:Sodium mg, 7:Doses per Package
+- 8:Amazon Package Price, 9:Amazon Cost per dose, 10:Amazon URL
+- 11:2nd Retailer Label, 12:2nd Retailer Package Price, 13:2nd Retailer Cost Per Dose, 14:2nd Retailer URL
+- 15:Image, 16:Note
+
 Fields still needing population:
-- `standardDosage` — from each product's official documentation
-- `productUrl` — manufacturer/brand website for each product
-- `image` — product photo filename; drop JPG/PNG into `/public/images/` and set filename
+- `standardDosage` — still null for Reflux Raft and Gaviscon Double Action Liquid
+- `packagePrice` / `costPerDose` on 2nd retailer buyLinks — where product site prices are known
 
 ---
 
@@ -91,16 +99,11 @@ User doesn't have a Vercel account yet. Steps:
 3. Deploy (auto, zero config needed)
 4. Add custom domain — leaning toward `alginatecompare.com`, checking availability
 
-### 2. Google Sheets as live CMS
-Replace hardcoded data with a fetch from the Sheets API v4.
-- Make sheet publicly viewable (share → anyone with link → viewer)
-- Get Google Cloud API key with Sheets API enabled
-- Fetch in a server component: `https://sheets.googleapis.com/v4/spreadsheets/{ID}/values/Sheet1?key={KEY}`
-- Use `export const revalidate = 86400` for daily refresh
-- Spreadsheet columns to add: `Standard Dosage`, `Buy URL 2`, `Buy Label 2`, `Product URL`, `Image Filename`
+### 2. ~~Google Sheets as live CMS~~ ✅ DONE
+Published CSV approach — no API key needed. See `app/lib/getProducts.js`.
 
-### 3. Product images
-Drop product photos (400×400px PNG/JPG) into `/public/images/` and set each product's `image` field to the filename. Next.js `<Image>` component is already wired up.
+### 3. ~~Product images~~ ✅ DONE
+7 products have transparent PNG images in `/public/images/` at full, 500px, and 48px sizes, generated via rembg AI background removal. Script at `/tmp/process_images.py`.
 
 ### 4. Populate missing data fields
 - `standardDosage` — from product documentation
@@ -114,6 +117,34 @@ Apply once the site has content indexed and some traffic. Health/personal care p
 - Each product gets a short written blurb/review
 - Structured data: Product schema markup
 - XML sitemap
+
+### 7. Blog / content section
+Simple editorial section for SEO and AI citation. MDX files in `/content/posts/` are the likely approach — write in Markdown, supports images, no external CMS needed, renders via Next.js App Router. Each post gets a slug-based URL (`/blog/[slug]`). No Sanity or other headless CMS required.
+
+### 8. Product notes / comment field
+A per-product freeform text field visible on the site — useful for caveats, sourcing notes, import warnings, etc. Add a `Notes` column (col O, shifting Image to col P) to the sheet and wire it into the data model and table UI.
+
+### 9. Multi-retailer pricing design problem
+When a product has buy links from more than one retailer (e.g. Amazon + BritishEssentials), the prices will often differ. The current data model stores one `containerCost` and `costPerDose`, and the $/dose column reflects that single figure. This breaks down once secondary retailer prices are added.
+
+**Example:** Gaviscon Advance Liquid 300ml is ~$33.99 on BritishEssentials.com, which yields a different $/dose than the Amazon 1000ml 2-pack at $71.
+
+**Design options to evaluate:**
+
+1. **Per-button price label (recommended starting point)** — Extend `buyLinks` to `[{ label, url, price? }]`. Show the price inline on each buy button (e.g. "Amazon $0.71 →", "BritishEssentials $0.52 →"). The $/dose column shows the lowest available price across all linked retailers. Simple to implement, fully transparent.
+
+2. **Price range in $/dose column** — Display "from $0.52" or "$0.52–$0.71" when multiple prices exist. Clean for scanning; loses per-retailer detail in the table view.
+
+3. **Keep $/dose as primary price only** — Amazon (or whichever link is first) is always the canonical price. Secondary buttons are labeled "Also available" with no price comparison implied. Simplest; least informative.
+
+4. **Separate row per retailer** — Each retailer listing gets its own table row. Maximally transparent but balloons the table and creates confusing duplicates for the same product.
+
+**Data model change needed for option 1:**
+```js
+// Sheet columns to add: Buy 1 Price, Buy 2 Price
+buyLinks: [{ label, url, price? }]   // price is optional $/dose override
+```
+The `costPerDose` field would become `Math.min(...buyLinks.map(l => l.price ?? containerCost / doses))`.
 
 ---
 

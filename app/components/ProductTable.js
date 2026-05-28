@@ -2,142 +2,12 @@
 import { useState, useMemo } from 'react'
 import Image from 'next/image'
 
-const PRODUCTS = [
-  {
-    id: 1,
-    name: 'Reflux Gourmet',
-    variant: '8 oz liquid',
-    form: 'liquid',
-    origin: 'US',
-    containerCost: 28.00,
-    doseDescription: '5ml',
-    standardDosage: null,
-    algMg: 425,
-    doses: 47,
-    costPerDose: 0.60,
-    buyLinks: [],
-    productUrl: null,
-    image: null,
-  },
-  {
-    id: 2,
-    name: 'Reflux Gourmet',
-    variant: 'Single-serve packs (25 ct)',
-    form: 'liquid',
-    origin: 'US',
-    containerCost: 32.00,
-    doseDescription: '5ml',
-    standardDosage: null,
-    algMg: 425,
-    doses: 25,
-    costPerDose: 1.28,
-    buyLinks: [{ label: 'Amazon', url: 'https://a.co/d/bnGGaDH' }],
-    productUrl: null,
-    image: null,
-  },
-  {
-    id: 3,
-    name: 'Reflux Raft',
-    variant: '8 oz liquid',
-    form: 'liquid',
-    origin: 'US',
-    containerCost: 33.00,
-    doseDescription: '5ml',
-    standardDosage: null,
-    algMg: 245,
-    doses: 47,
-    costPerDose: 0.70,
-    buyLinks: [{ label: 'Amazon', url: 'https://a.co/d/7TYqIHg' }],
-    productUrl: null,
-    image: null,
-  },
-  {
-    id: 4,
-    name: 'Gaviscon Advance Chewable',
-    variant: '60 ct',
-    form: 'tablet',
-    origin: 'UK import',
-    containerCost: 19.00,
-    doseDescription: '1 tablet',
-    standardDosage: null,
-    algMg: 500,
-    doses: 60,
-    costPerDose: 0.37,
-    buyLinks: [{ label: 'Amazon', url: 'https://a.co/d/cdQMvXD' }],
-    productUrl: null,
-    image: null,
-  },
-  {
-    id: 5,
-    name: 'Gaviscon Advance Chewable',
-    variant: '120 ct (2-pack)',
-    form: 'tablet',
-    origin: 'UK import',
-    containerCost: 29.49,
-    doseDescription: '1 tablet',
-    standardDosage: null,
-    algMg: 500,
-    doses: 120,
-    costPerDose: 0.25,
-    buyLinks: [{ label: 'Amazon', url: 'https://a.co/d/cdQMvXD' }],
-    productUrl: null,
-    image: null,
-  },
-  {
-    id: 6,
-    name: 'Gaviscon Double Action Mint',
-    variant: '48 ct chewable tablets',
-    form: 'tablet',
-    origin: 'UK import',
-    containerCost: 12.00,
-    doseDescription: '2 tablets',
-    standardDosage: null,
-    algMg: 500,
-    doses: 24,
-    costPerDose: 0.50,
-    buyLinks: [{ label: 'Amazon', url: 'https://a.co/d/5wzAVE6' }],
-    productUrl: null,
-    image: null,
-  },
-  {
-    id: 7,
-    name: 'Gaviscon Double Action Liquid',
-    variant: '600ml peppermint',
-    form: 'liquid',
-    origin: 'UK import',
-    containerCost: 52.00,
-    doseDescription: '10ml',
-    standardDosage: null,
-    algMg: 500,
-    doses: 60,
-    costPerDose: 0.86,
-    buyLinks: [{ label: 'Amazon', url: 'https://a.co/d/dpRogZa' }],
-    productUrl: null,
-    image: null,
-  },
-  {
-    id: 8,
-    name: 'Gaviscon Advance Liquid',
-    variant: '1000ml (2-pack)',
-    form: 'liquid',
-    origin: 'UK import',
-    containerCost: 71.00,
-    doseDescription: '5ml',
-    standardDosage: null,
-    algMg: 500,
-    doses: 100,
-    costPerDose: 0.71,
-    buyLinks: [{ label: 'Amazon', url: 'https://a.co/d/1NyKegT' }],
-    productUrl: null,
-    image: null,
-  },
-]
-
 const SORT_COLS = [
-  { key: 'algMg', label: 'Alginate/dose' },
-  { key: 'containerCost', label: 'Container' },
-  { key: 'doses', label: 'Doses' },
-  { key: 'costPerDose', label: '$/dose' },
+  { key: 'algMg',         label: 'Alginate/dose' },
+  { key: 'sodiumMg',      label: 'Sodium/dose'   },
+  { key: 'containerCost', label: 'Price'         },
+  { key: 'doses',         label: 'Doses'         },
+  { key: 'costPerDose',   label: '$/dose'        },
 ]
 
 function ProductThumb({ image, name }) {
@@ -156,51 +26,25 @@ function ProductThumb({ image, name }) {
   )
 }
 
-function BuyButtons({ buyLinks, productUrl }) {
-  if (!buyLinks.length && !productUrl) {
-    return <span className="text-gray-300 text-xs">—</span>
-  }
-  return (
-    <div className="flex flex-col gap-1.5 items-center">
-      {buyLinks.map((link, i) => (
-        <a
-          key={i}
-          href={link.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-block bg-amber-400 hover:bg-amber-500 text-gray-900 text-xs font-semibold px-3 py-1.5 rounded transition-colors whitespace-nowrap"
-        >
-          {link.label} →
-        </a>
-      ))}
-      {productUrl && (
-        <a
-          href={productUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs text-teal-600 hover:text-teal-800 hover:underline"
-        >
-          Product site ↗
-        </a>
-      )}
-    </div>
-  )
-}
-
-export default function ProductTable() {
+export default function ProductTable({ products }) {
   const [filter, setFilter] = useState('all')
   const [sortBy, setSortBy] = useState('costPerDose')
   const [sortDir, setSortDir] = useState('asc')
 
   const sorted = useMemo(() => {
-    const base = filter === 'all' ? PRODUCTS : PRODUCTS.filter(p => p.form === filter)
+    const base = filter === 'all' ? products : products.filter(p => p.form === filter)
     return [...base].sort((a, b) => {
-      const diff = a[sortBy] - b[sortBy]
+      const aVal = a[sortBy]
+      const bVal = b[sortBy]
+      const diff = typeof aVal === 'string' ? aVal.localeCompare(bVal) : aVal - bVal
       return sortDir === 'asc' ? diff : -diff
     })
-  }, [filter, sortBy, sortDir])
+  }, [products, filter, sortBy, sortDir])
 
-  const cheapestDose = Math.min(...sorted.map(p => p.costPerDose))
+  const cheapestDose = useMemo(
+    () => Math.min(...sorted.map(p => p.costPerDose)),
+    [sorted]
+  )
 
   function handleSort(col) {
     if (sortBy === col) {
@@ -218,11 +62,12 @@ export default function ProductTable() {
 
   return (
     <div>
+      {/* Filter pills */}
       <div className="flex flex-wrap gap-2 mb-5">
         {[
-          { value: 'all', label: 'All products' },
-          { value: 'liquid', label: 'Liquid' },
-          { value: 'tablet', label: 'Chewable tablet' },
+          { value: 'all',    label: 'All products' },
+          { value: 'liquid', label: 'Liquid'        },
+          { value: 'tablet', label: 'Tablet'        },
         ].map(({ value, label }) => (
           <button
             key={value}
@@ -239,12 +84,22 @@ export default function ProductTable() {
         <span className="ml-auto text-sm text-gray-400 self-center">{sorted.length} products</span>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-sm bg-white">
+      <div className="rounded-xl border border-gray-200 shadow-sm bg-white overflow-hidden">
         <table className="w-full text-sm">
+
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="text-left px-4 py-3 font-semibold text-gray-600">Product</th>
-              <th className="text-left px-4 py-3 font-semibold text-gray-600 hidden sm:table-cell">Form</th>
+              <th
+                className={`text-left px-4 py-3 font-semibold cursor-pointer select-none ${
+                  sortBy === 'name' ? 'text-teal-700' : 'text-gray-600 hover:text-teal-600'
+                }`}
+                onClick={() => handleSort('name')}
+              >
+                Product<SortIcon col="name" />
+              </th>
+              <th className="text-left px-4 py-3 font-semibold text-gray-600 hidden sm:table-cell">
+                Form
+              </th>
               {SORT_COLS.map(({ key, label }) => (
                 <th
                   key={key}
@@ -253,64 +108,133 @@ export default function ProductTable() {
                   } ${key !== 'costPerDose' ? 'hidden md:table-cell' : ''}`}
                   onClick={() => handleSort(key)}
                 >
-                  {label}
-                  <SortIcon col={key} />
+                  {label}<SortIcon col={key} />
                 </th>
               ))}
               <th className="text-center px-4 py-3 font-semibold text-gray-600">Buy</th>
             </tr>
           </thead>
-          <tbody>
-            {sorted.map((p) => {
-              const isBest = p.costPerDose === cheapestDose
-              return (
-                <tr
-                  key={p.id}
-                  className={`border-b border-gray-100 last:border-0 ${isBest ? 'bg-green-50' : 'hover:bg-slate-50'}`}
-                >
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <ProductThumb image={p.image} name={p.name} />
-                      <div>
-                        <div className="font-medium text-gray-900">{p.name}</div>
-                        <div className="text-gray-500 text-xs mt-0.5">{p.variant}</div>
-                        <span className={`text-xs px-1.5 py-0.5 rounded mt-1 inline-block font-medium ${
-                          p.origin === 'US'
-                            ? 'bg-blue-50 text-blue-600'
-                            : 'bg-orange-50 text-orange-600'
-                        }`}>
-                          {p.origin}
-                        </span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 hidden sm:table-cell">
-                    <div className="text-gray-600 capitalize">{p.form}</div>
-                    {p.standardDosage && (
-                      <div className="text-xs text-gray-400 mt-0.5">{p.standardDosage}</div>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right hidden md:table-cell">
-                    <div className="text-gray-700">{p.algMg}mg</div>
-                    <div className="text-xs text-gray-400">{p.doseDescription}</div>
-                  </td>
-                  <td className="px-4 py-3 text-right text-gray-700 hidden md:table-cell">${p.containerCost.toFixed(2)}</td>
-                  <td className="px-4 py-3 text-right text-gray-700 hidden md:table-cell">{p.doses}</td>
-                  <td className="px-4 py-3 text-right">
-                    <div className={`font-bold text-base ${isBest ? 'text-green-700' : 'text-gray-900'}`}>
-                      ${p.costPerDose.toFixed(2)}
-                    </div>
-                    {isBest && (
-                      <div className="text-xs text-green-600 font-medium">Best value</div>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <BuyButtons buyLinks={p.buyLinks} productUrl={p.productUrl} />
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
+
+          {sorted.map((p, productIdx) => {
+            const isBestProduct  = p.costPerDose === cheapestDose
+            const links          = p.buyLinks.length > 0 ? p.buyLinks : [null]
+            const rowCount       = links.length
+            const isLastProduct  = productIdx === sorted.length - 1
+
+            // Separator between products; none after the last one
+            const productBorder  = isLastProduct ? '' : 'border-b border-gray-200'
+            const bgClass        = isBestProduct ? 'bg-green-50' : 'group-hover:bg-slate-50'
+
+            return (
+              <tbody key={p.id} className="group">
+                {links.map((link, linkIdx) => {
+                  const isFirstLink = linkIdx === 0
+                  const isLastLink  = linkIdx === rowCount - 1
+                  const isBestLink  = link?.costPerDose != null && link.costPerDose === cheapestDose
+
+                  // Between sub-rows of the same product: hairline only on the per-retailer cells.
+                  // Between products: full border on every cell (rowspan cells only show this at
+                  // their bottom edge, which lines up with the last sub-row — exactly right).
+                  const subRowBorder   = 'border-b border-gray-200'   // intra-product
+                  const retailerBorder = isLastLink ? productBorder : subRowBorder
+
+                  return (
+                    <tr key={linkIdx} className={bgClass}>
+
+                      {/* ── Product-info cells (rowspan across all sub-rows) ── */}
+                      {isFirstLink && (<>
+                        <td rowSpan={rowCount} className={`px-4 py-3 align-top ${productBorder}`}>
+                          <div className="flex items-start gap-3">
+                            <ProductThumb image={p.image} name={p.name} />
+                            <div>
+                              <div className="font-medium text-gray-900">{p.name}</div>
+                              <div className="text-gray-500 text-xs mt-0.5">{p.variant}</div>
+                              <span className={`text-xs px-1.5 py-0.5 rounded mt-1 inline-block font-medium ${
+                                p.origin === 'US'
+                                  ? 'bg-blue-50 text-blue-600'
+                                  : 'bg-orange-50 text-orange-600'
+                              }`}>
+                                {p.origin}
+                              </span>
+                              {p.note && (
+                                <p className="text-xs text-gray-400 italic mt-1.5 max-w-xs">{p.note}</p>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+
+                        <td rowSpan={rowCount} className={`px-4 py-3 align-top hidden sm:table-cell ${productBorder}`}>
+                          <div className="text-gray-600 capitalize">{p.form}</div>
+                          {p.standardDosage && (
+                            <div className="text-xs text-gray-400 mt-0.5">{p.standardDosage}</div>
+                          )}
+                        </td>
+
+                        <td rowSpan={rowCount} className={`px-4 py-3 text-right align-top hidden md:table-cell ${productBorder}`}>
+                          <div className="text-gray-700">{p.algMg}mg</div>
+                        </td>
+
+                        <td rowSpan={rowCount} className={`px-4 py-3 text-right align-top hidden md:table-cell ${productBorder}`}>
+                          <div className="text-gray-700">{p.sodiumMg > 0 ? `${p.sodiumMg}mg` : '—'}</div>
+                        </td>
+
+                        <td rowSpan={rowCount} className={`px-4 py-3 text-right align-top hidden md:table-cell ${productBorder}`}>
+                          <div className="text-gray-700">${p.containerCost.toFixed(2)}</div>
+                        </td>
+
+                        <td rowSpan={rowCount} className={`px-4 py-3 text-right align-top hidden md:table-cell ${productBorder}`}>
+                          <div className="text-gray-700">{p.doses}</div>
+                        </td>
+                      </>)}
+
+                      {/* ── Per-retailer: $/dose ── */}
+                      <td className={`px-4 py-3 text-right ${retailerBorder}`}>
+                        {link?.costPerDose != null ? (
+                          <>
+                            <div className={`font-bold text-base ${isBestLink ? 'text-green-700' : 'text-gray-900'}`}>
+                              ${link.costPerDose.toFixed(2)}
+                            </div>
+                            {isBestLink && (
+                              <div className="text-xs text-green-600 font-medium">Best value</div>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-gray-300 text-xs">—</span>
+                        )}
+                      </td>
+
+                      {/* ── Per-retailer: buy button ── */}
+                      <td className={`px-4 py-3 text-center ${retailerBorder}`}>
+                        {!link ? (
+                          <span className="text-gray-300 text-xs">—</span>
+                        ) : link.label === 'Amazon' ? (
+                          <a
+                            href={link.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-block bg-amber-400 hover:bg-amber-500 text-gray-900 text-xs font-semibold px-3 py-1.5 rounded transition-colors whitespace-nowrap"
+                          >
+                            Amazon →
+                          </a>
+                        ) : (
+                          <a
+                            href={link.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-teal-600 hover:text-teal-800 hover:underline font-medium whitespace-nowrap"
+                          >
+                            {link.label} ↗
+                          </a>
+                        )}
+                      </td>
+
+                    </tr>
+                  )
+                })}
+              </tbody>
+            )
+          })}
+
         </table>
       </div>
     </div>

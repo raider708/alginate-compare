@@ -1,13 +1,18 @@
 import ProductTable from '@/app/components/ProductTable'
+import { getProducts } from '@/app/lib/getProducts'
+
+export const revalidate = 3600
 
 export const metadata = {
   title: 'Alginate Compare — Find the cheapest sodium alginate reflux medication',
   description: 'Compare prices of sodium alginate raft-forming antacids available in the US. Gaviscon Advance (UK), Reflux Gourmet, Reflux Raft — sorted by cost per dose.',
 }
 
-export default function Home() {
+export default async function Home() {
+  const products = await getProducts()
+
   return (
-    <main className="max-w-4xl mx-auto px-4 py-10 sm:py-14">
+    <main className="max-w-6xl mx-auto px-4 py-10 sm:py-14">
 
       <header className="mb-8">
         <div className="flex items-center gap-2 mb-3">
@@ -32,7 +37,7 @@ export default function Home() {
         </p>
       </section>
 
-      <ProductTable />
+      <ProductTable products={products} />
 
       <footer className="mt-10 pt-6 border-t border-gray-200 text-xs text-gray-400 space-y-1">
         <p>Prices are sourced from Amazon and updated periodically. Verify current pricing before purchasing.</p>
