@@ -1,5 +1,7 @@
 import ProductTable from '@/app/components/ProductTable'
+import ContentGrid from '@/app/components/ContentGrid'
 import { getProducts } from '@/app/lib/getProducts'
+import { getPosts } from '@/app/lib/sanity'
 
 export const revalidate = 3600
 
@@ -9,7 +11,7 @@ export const metadata = {
 }
 
 export default async function Home() {
-  const products = await getProducts()
+  const [products, posts] = await Promise.all([getProducts(), getPosts()])
 
   return (
     <main className="max-w-6xl mx-auto px-4 py-10 sm:py-14">
@@ -38,6 +40,12 @@ export default async function Home() {
       </section>
 
       <ProductTable products={products} />
+
+      {posts.length > 0 && (
+        <div id="resources">
+          <ContentGrid posts={posts} />
+        </div>
+      )}
 
       <footer className="mt-10 pt-6 border-t border-gray-200 text-xs text-gray-400 space-y-1">
         <p>Prices are sourced from Amazon and updated periodically. Verify current pricing before purchasing.</p>
