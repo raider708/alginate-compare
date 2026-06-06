@@ -51,9 +51,11 @@ Fetching logic is in `app/lib/getProducts.js`. If the sheet is unreachable or `S
 **Live data source:** Google Sheet published CSV, fetched server-side, revalidated every hour.
 Sheet columns (0-indexed):
 - 0:Name, 1:Package Size, 2:Form, 3:Origin, 4:Standard Dosage, 5:Alginate mg, 6:Sodium mg, 7:Doses per Package
-- 8:Amazon Package Price, 9:Amazon Cost per dose, 10:Amazon URL
-- 11:2nd Retailer Label, 12:2nd Retailer Package Price, 13:2nd Retailer Cost Per Dose, 14:2nd Retailer URL
-- 15:Image, 16:Note
+- 8:Amazon Package Price, 9:Amazon Cost per dose, 10:Amazon URL, 11:Amazon URL affiliate link
+- 12:2nd Retailer Label, 13:2nd Retailer Package Price, 14:2nd Retailer Cost Per Dose, 15:2nd Retailer URL
+- 16:Image, 17:Note
+
+Parser uses col 11 (affiliate link) for the Amazon buy URL, falling back to col 10 if col 11 is empty.
 
 Fields still needing population:
 - `packagePrice` / `costPerDose` on 2nd retailer buyLinks for products where site prices are unknown

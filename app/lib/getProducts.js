@@ -3,87 +3,107 @@
 export const FALLBACK_PRODUCTS = [
   {
     id: 1, name: 'Reflux Gourmet', variant: '8 oz', form: 'liquid', origin: 'US',
-    standardDosage: '5ml', algMg: 425, sodiumMg: 28, doses: 47, containerCost: 28.00, costPerDose: 0.60,
+    standardDosage: '5 ml / 1 tsp', algMg: 425, sodiumMg: 28, doses: 47, containerCost: 28.00, costPerDose: 0.60,
     buyLinks: [
-      { label: 'Amazon',         url: 'https://a.co/d/0cfw6PVa',                                       packagePrice: 28.00, costPerDose: 0.60 },
+      { label: 'Amazon',         url: 'https://amzn.to/4uWGcjq',                                       packagePrice: 28.00, costPerDose: 0.60 },
       { label: 'Reflux Gourmet', url: 'https://refluxgourmet.com/product/vanilla-caramel-rescue-dd/',  packagePrice: null,  costPerDose: null  },
     ],
     note: null, image: 'reflux-gourmet-8oz.png',
   },
   {
     id: 2, name: 'Reflux Gourmet', variant: '25 single-serve packs', form: 'liquid', origin: 'US',
-    standardDosage: '5ml', algMg: 425, sodiumMg: 0, doses: 25, containerCost: 32.00, costPerDose: 1.28,
+    standardDosage: '5 ml / 1 tsp', algMg: 425, sodiumMg: 28, doses: 25, containerCost: 32.00, costPerDose: 1.28,
     buyLinks: [
-      { label: 'Amazon',         url: 'https://a.co/d/bnGGaDH',                                          packagePrice: 32.00, costPerDose: 1.28 },
+      { label: 'Amazon',         url: 'https://amzn.to/4fpq2tY',                                         packagePrice: 32.00, costPerDose: 1.28 },
       { label: 'Reflux Gourmet', url: 'https://refluxgourmet.com/product/single-serve-multi-pack-dd/',   packagePrice: null,  costPerDose: null  },
     ],
     note: null, image: 'reflux-gourmet-single-serve.png',
   },
   {
     id: 3, name: 'Reflux Raft', variant: '8 oz', form: 'liquid', origin: 'US',
-    standardDosage: null, algMg: 245, sodiumMg: 0, doses: 47, containerCost: 33.00, costPerDose: 0.70,
+    standardDosage: '5 ml / 1 tsp', algMg: 338, sodiumMg: 28, doses: 47, containerCost: 33.00, costPerDose: 0.70,
     buyLinks: [
-      { label: 'Amazon',      url: 'https://a.co/d/7TYqIHg',                                                               packagePrice: 33.00, costPerDose: 0.70 },
+      { label: 'Amazon',      url: 'https://amzn.to/43RayaW',                                                              packagePrice: 33.00, costPerDose: 0.70 },
       { label: 'Reflux Raft', url: 'https://refluxraft.com/collections/frontpage/products/lemon-ginger', packagePrice: null,  costPerDose: null  },
     ],
-    note: null, image: 'reflux-raft-8oz.png',
+    note: 'Discount with subscription', image: 'reflux-raft-8oz.png',
   },
   {
     id: 4, name: 'Gaviscon Advance Chewable', variant: '60 tablets', form: 'tablet', origin: 'UK import',
-    standardDosage: '2 tablets', algMg: 500, sodiumMg: 0, doses: 60, containerCost: 19.00, costPerDose: 0.32,
+    standardDosage: '1 tablet', algMg: 500, sodiumMg: 53, doses: 60, containerCost: 30.00, costPerDose: 0.50,
     buyLinks: [
-      { label: 'Amazon', url: 'https://a.co/d/cdQMvXD', packagePrice: 19.00, costPerDose: 0.32 },
+      { label: 'Amazon', url: 'https://amzn.to/43g01Gj', packagePrice: 30.00, costPerDose: 0.50 },
     ],
-    note: null, image: 'gaviscon-advance-chewable.png',
+    note: 'These get really gummy when chewing', image: 'gaviscon-advance-chewable.png',
   },
   {
     id: 5, name: 'Gaviscon Advance Chewable', variant: '120 tablets (2-pack)', form: 'tablet', origin: 'UK import',
-    standardDosage: '2 tablets', algMg: 500, sodiumMg: 0, doses: 120, containerCost: 29.49, costPerDose: 0.25,
+    standardDosage: '1 tablet', algMg: 500, sodiumMg: 53, doses: 120, containerCost: 50.00, costPerDose: 0.42,
     buyLinks: [
-      { label: 'Amazon', url: 'https://a.co/d/cdQMvXD', packagePrice: 29.49, costPerDose: 0.25 },
+      { label: 'Amazon', url: 'https://amzn.to/4fNHCbp', packagePrice: 50.00, costPerDose: 0.42 },
     ],
-    note: null, image: 'gaviscon-advance-chewable.png',
+    note: 'These get really gummy when chewing', image: 'gaviscon-advance-chewable.png',
   },
   {
-    id: 6, name: 'Gaviscon Double Action Mint', variant: '48 tablets', form: 'tablet', origin: 'UK import',
-    standardDosage: '2 tablets', algMg: 500, sodiumMg: 0, doses: 24, containerCost: 12.00, costPerDose: 0.50,
+    id: 6, name: 'Gaviscon Double Action Tablets', variant: '24 tablets', form: 'tablet', origin: 'UK import',
+    standardDosage: '2 tablets', algMg: 500, sodiumMg: 106, doses: 12, containerCost: 27.00, costPerDose: 2.25,
     buyLinks: [
-      { label: 'Amazon', url: 'https://a.co/d/5wzAVE6', packagePrice: 12.00, costPerDose: 0.50 },
+      { label: 'Amazon', url: 'https://amzn.to/49LftOb', packagePrice: 27.00, costPerDose: 2.25 },
     ],
     note: null, image: 'gaviscon-double-action-mint.png',
   },
   {
-    id: 7, name: 'Gaviscon Double Action Liquid', variant: '600ml', form: 'liquid', origin: 'UK import',
-    standardDosage: null, algMg: 500, sodiumMg: 0, doses: 60, containerCost: 52.00, costPerDose: 0.87,
+    id: 7, name: 'Gaviscon Double Action Liquid', variant: '150ml x 2 pack', form: 'liquid', origin: 'UK import',
+    standardDosage: '10 ml / 2 tsp', algMg: 500, sodiumMg: 127, doses: 30, containerCost: 34.00, costPerDose: 1.13,
     buyLinks: [
-      { label: 'Amazon', url: 'https://a.co/d/dpRogZa', packagePrice: 52.00, costPerDose: 0.87 },
+      { label: 'Amazon',            url: 'https://amzn.to/3PItGVu',                                                                                                      packagePrice: 34.00, costPerDose: 1.13 },
+      { label: 'British Essentials', url: 'https://us.britishessentials.com/products/gaviscon-double-action-liquid-heartburn-indigestion-relief-mint-500ml-copy', packagePrice: 61.79, costPerDose: 2.06 },
     ],
-    note: null, image: 'gaviscon-double-action-liquid.png',
+    note: 'Pink bottle', image: 'gaviscon-double-action-liquid.png',
   },
   {
     id: 8, name: 'Gaviscon Advance Liquid ("Gav")', variant: '500ml', form: 'liquid', origin: 'UK import',
-    standardDosage: '5ml', algMg: 500, sodiumMg: 0, doses: 100, containerCost: 35.99, costPerDose: 0.36,
+    standardDosage: '5 ml / 1 tsp', algMg: 500, sodiumMg: 58, doses: 100, containerCost: 36.00, costPerDose: 0.36,
     buyLinks: [
-      { label: 'Amazon', url: 'https://a.co/d/08IB9kWQ', packagePrice: 35.99, costPerDose: 0.36 },
+      { label: 'Amazon',             url: 'https://amzn.to/4uP0IlS',                                                                                                    packagePrice: 36.00, costPerDose: 0.36 },
+      { label: 'British Essentials', url: 'https://us.britishessentials.com/products/gaviscon-advance-double-strength-heartburn-indigestion-aniseed-300ml', packagePrice: 33.99, costPerDose: 0.68 },
     ],
     note: null, image: 'gaviscon-advance-liquid.png',
   },
   {
-    id: 9, name: 'HartSpan Khelp', variant: '60 capsules', form: 'tablet', origin: 'US',
-    standardDosage: '2 tablets', algMg: 950, sodiumMg: 0, doses: 30, containerCost: 54.00, costPerDose: 1.80,
+    id: 9, name: 'Gaviscon Advance Liquid ("Gav")', variant: '500ml x 2 pack', form: 'liquid', origin: 'UK import',
+    standardDosage: '5 ml / 1 tsp', algMg: 500, sodiumMg: 58, doses: 200, containerCost: 67.00, costPerDose: 0.34,
     buyLinks: [
-      { label: 'Amazon',   url: 'https://a.co/d/0dsveMM3',            packagePrice: 54.00, costPerDose: 1.80 },
+      { label: 'Amazon',             url: 'https://amzn.to/4uP0IlS',                                                                                                    packagePrice: 67.00, costPerDose: 0.34 },
+      { label: 'British Essentials', url: 'https://us.britishessentials.com/products/gaviscon-advance-double-strength-heartburn-indigestion-aniseed-300ml', packagePrice: 33.99, costPerDose: 0.68 },
+    ],
+    note: null, image: 'gaviscon-advance-liquid.png',
+  },
+  {
+    id: 10, name: 'HartSpan Khelp', variant: '60 capsules', form: 'tablet', origin: 'US',
+    standardDosage: '2 capsules', algMg: 950, sodiumMg: 190, doses: 30, containerCost: 54.00, costPerDose: 1.80,
+    buyLinks: [
+      { label: 'Amazon',   url: 'https://amzn.to/4vD527X',            packagePrice: 54.00, costPerDose: 1.80 },
       { label: 'HartSpan', url: 'https://hartspan.com/products/khelp', packagePrice: null,  costPerDose: null  },
     ],
-    note: null, image: null,
+    note: 'Newest on market? Discount with subscription', image: 'hartspan-khelp.png',
+  },
+  {
+    id: 11, name: 'Refluxter', variant: '60 capsules', form: 'tablet', origin: 'US',
+    standardDosage: '2 capsules', algMg: 1000, sodiumMg: 150, doses: 30, containerCost: 30.00, costPerDose: 0.90,
+    buyLinks: [
+      { label: 'Amazon',   url: 'https://amzn.to/49FxoGa',                                       packagePrice: 30.00, costPerDose: 1.00 },
+      { label: 'Nutritist', url: 'https://www.nutritist.us/products/refluxter-acid-reflux-support', packagePrice: 27.00, costPerDose: 0.90 },
+    ],
+    note: null, image: 'refluxter.png',
   },
 ]
 
 // Sheet columns (0-indexed):
 // 0:Name  1:Package Size  2:Form  3:Origin  4:Standard Dosage  5:Alginate mg  6:Sodium mg  7:Doses per Package
-// 8:Amazon Package Price  9:Amazon Cost per dose  10:Amazon URL
-// 11:2nd Retailer Label  12:2nd Retailer Package Price  13:2nd Retailer Cost Per Dose  14:2nd Retailer URL
-// 15:Image  16:Note
+// 8:Amazon Package Price  9:Amazon Cost per dose  10:Amazon URL  11:Amazon URL affiliate link
+// 12:2nd Retailer Label  13:2nd Retailer Package Price  14:2nd Retailer Cost Per Dose  15:2nd Retailer URL
+// 16:Image  17:Note
 function parseSheet(csv) {
   const [headerLine, ...dataLines] = csv.trim().split('\n')
   const headers = parseCSVLine(headerLine).map(h => h.trim().toLowerCase())
@@ -97,12 +117,13 @@ function parseSheet(csv) {
 
     const amazonPackagePrice = parseFloat((c[8]  ?? '').replace(/[$,]/g, '')) || 0
     const amazonCostPerDose  = parseFloat((c[9]  ?? '').replace(/[$,]/g, '')) || 0
-    const amazonUrl          = (c[10] ?? '').trim()
+    // Use affiliate link (col 11) if available, fall back to plain Amazon URL (col 10)
+    const amazonUrl          = (c[11] ?? '').trim() || (c[10] ?? '').trim()
 
-    const buy2Label        = (c[11] ?? '').trim()
-    const buy2PackagePrice = parseFloat((c[12] ?? '').replace(/[$,]/g, '')) || 0
-    const buy2CostPerDose  = parseFloat((c[13] ?? '').replace(/[$,]/g, '')) || 0
-    const buy2Url          = (c[14] ?? '').trim()
+    const buy2Label        = (c[12] ?? '').trim()
+    const buy2PackagePrice = parseFloat((c[13] ?? '').replace(/[$,]/g, '')) || 0
+    const buy2CostPerDose  = parseFloat((c[14] ?? '').replace(/[$,]/g, '')) || 0
+    const buy2Url          = (c[15] ?? '').trim()
 
     // Product-level $/dose = best available price across all retailers (used for sorting)
     const bestCostPerDose = (buy2CostPerDose > 0)
@@ -135,8 +156,8 @@ function parseSheet(csv) {
           costPerDose:  buy2CostPerDose  || null,
         },
       ].filter(Boolean),
-      note:  (c[16] ?? '').trim() || null,
-      image: (c[15] ?? '').trim() || null,
+      note:  (c[17] ?? '').trim() || null,
+      image: (c[16] ?? '').trim() || null,
     }
   })
 }
