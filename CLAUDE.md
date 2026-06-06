@@ -146,7 +146,14 @@ User wants a section for categorized external links — not blog content, but a 
 
 **Alternative:** MDX file at `/content/resources.mdx` — simpler if the list is small and changes infrequently.
 
-### 8. SEO / structured data
+### 8. Personal voice + About panel ← DESIGN PRIORITY FOR NEXT SESSION
+The site currently feels like a neutral tool. Goal: soften the tone and make it more personal.
+
+- **About Chris panel** — photo of Chris + short personal note about his own journey discovering sodium alginate for reflux. Sits between the intro section and the product table (or after it). Warm, first-person, relatable.
+- **Reframe the content section** — "Research & Resources" becomes more like "My Research" or similar. Cards and articles written in Chris's voice with his own take, not just neutral links.
+- **Tone of the whole page** — revisit the intro copy to feel less like a data tool and more like a recommendation from someone who's been through it.
+
+### 9. SEO / structured data
 - Product schema markup (JSON-LD) on the comparison table entries
 - XML sitemap at `/sitemap.xml`
 - Each product gets a short written blurb (can live in sheet Note column or as MDX)
