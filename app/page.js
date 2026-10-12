@@ -3,7 +3,7 @@ import ContentGrid from '@/app/components/ContentGrid'
 import { getProducts } from '@/app/lib/getProducts'
 import { getPosts } from '@/app/lib/sanity'
 
-export const revalidate = 3600
+export const revalidate = 900
 
 export const metadata = {
   title: 'Alginate Compare — Find the cheapest sodium alginate reflux medication',
@@ -11,7 +11,7 @@ export const metadata = {
 }
 
 export default async function Home() {
-  const [products, posts] = await Promise.all([getProducts(), getPosts()])
+  const [{ products, amazonLive, generatedAt }, posts] = await Promise.all([getProducts(), getPosts()])
 
   return (
     <main className="max-w-6xl mx-auto px-4 py-10 sm:py-14">
@@ -48,8 +48,17 @@ export default async function Home() {
       )}
 
       <footer className="mt-10 pt-6 border-t border-gray-200 text-xs text-gray-400 space-y-1">
-        <p>Prices are sourced from Amazon and updated periodically. Verify current pricing before purchasing.</p>
-        <p>This site may earn an affiliate commission on qualifying Amazon purchases at no extra cost to you.</p>
+        <p>
+          Prices and stock are checked automatically every few hours{generatedAt && ` (last check: ${generatedAt})`}.
+          {!amazonLive && ' Amazon prices aren\'t shown yet; use the Amazon button to see the current price.'}
+        </p>
+        {amazonLive && (
+          <p>
+            Product prices and availability are accurate as of the date/time indicated and are subject to change.
+            Any price and availability information displayed on Amazon at the time of purchase will apply to the purchase of the product.
+          </p>
+        )}
+        <p>As an Amazon Associate I earn from qualifying purchases. This site may also earn a commission from other stores, at no extra cost to you.</p>
       </footer>
 
     </main>

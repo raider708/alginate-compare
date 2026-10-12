@@ -22,78 +22,63 @@ The site earns affiliate commission by linking to Amazon (and eventually other r
 
 ---
 
-## Data source
+## Data & automatic price tracking
 
-**Live:** Google Sheet published CSV, fetched server-side (ISR, revalidated every hour).
-Sheet: `https://docs.google.com/spreadsheets/d/1ogEg7jDV9SxR-rJUzMAjxbAuohxTVUNFlymoKtBse30`
-CSV URL stored in `.env.local` as `SHEET_CSV_URL`.
+Prices are **never typed in by hand**. The flow:
 
-Fetching logic is in `app/lib/getProducts.js`. If the sheet is unreachable or `SHEET_CSV_URL` is unset, the app falls back to hardcoded data in `FALLBACK_PRODUCTS`. Add/edit rows in the sheet and the site reflects them within an hour (instant in dev with `cache: 'no-store'`).
+1. **Google Sheet** (`https://docs.google.com/spreadsheets/d/1ogEg7jDV9SxR-rJUzMAjxbAuohxTVUNFlymoKtBse30`) holds the catalog, on three tabs:
+   - **Products**: `ID, Name, Form, Origin, Standard Dosage, Alginate mg, Sodium mg, Image, Note` (one row per formulation)
+   - **Offers**: `Product ID, Retailer, Pack Size, Doses, URL, Variant` (one row per store × pack size; no prices). `Variant` picks a Shopify option by name (e.g. "1-month subscription"); default is the non-subscription option. Any Amazon link form works (amzn.to, a.co, /dp/ASIN).
+   - **Candidates**: for the upcoming new-product discovery job (not built yet).
+   Seed copies of the tabs live in `data/seed/*.csv`. The old single tab (gid=0, `SHEET_CSV_URL`) is no longer read.
+2. **`scripts/update-prices.mjs`** runs every 3 hours in GitHub Actions (`.github/workflows/update-prices.yml`, also has a manual "Run workflow" button). It reads the Products/Offers tabs (repo variables `SHEET_PRODUCTS_CSV_URL`, `SHEET_OFFERS_CSV_URL`), then:
+   - **Shopify stores** (Reflux Gourmet, Reflux Raft, HartSpan, Nutritist, British Essentials): reads `/products/<handle>.js` for price + stock. Any Shopify store works automatically.
+   - **Amazon**: Creators API (`scripts/lib/amazon.mjs`), secrets `AMAZON_CREDENTIAL_ID` / `AMAZON_CREDENTIAL_SECRET` (credential version 3.1). Needs 10 qualifying sales in the trailing 30 days; when not eligible the API says so and the script falls back to just checking links (404 = dead). Eligibility switches on/off by itself.
+   - Other stores: shown as a plain link with no price.
+   - Writes `latest.json` + `history.csv` to the **`data` branch** (single force-pushed commit; `history.csv` carries the price history, store sites only).
+   - Keeps one GitHub issue labelled `price-tracker` up to date with problems (dead links, out of stock, sheet typos, Amazon status changes) and closes it when all clear.
+3. **Site** (`app/lib/getProducts.js`) fetches `latest.json` from raw.githubusercontent.com (ISR, 15 min), falling back to `data/snapshot-fallback.json`. Freshness rules: Amazon prices hidden if older than 24h (Associates policy), store prices hidden after 72h.
+
+**Amazon Associates rules that shape this:** Amazon prices may only be shown if they come from the API, with a timestamp next to them and Amazon's disclaimer (the footer shows it when Amazon prices are live). Don't add manually entered or scraped Amazon prices, and don't store Amazon prices in history.
+
+Run locally: `node scripts/update-prices.mjs --out /tmp/prices --products data/seed/products.csv --offers data/seed/offers.csv` (add `--prev <dir>` to test history/alerts, `--debug-amazon` to see raw Creators API responses).
 
 ---
 
-## Data model (per product in ProductTable.js)
+## Data model (site, from `getProducts()`)
 
 ```js
 {
-  id, name, variant, form,           // form: 'liquid' | 'tablet'
-  origin,                             // 'US' | 'UK import'
-  containerCost,                      // Amazon package price
-  standardDosage,                     // e.g. "5ml", "2 tablets" — from product docs
-  algMg, doses,
-  costPerDose,                        // BEST price across all retailers (used for sorting)
-  buyLinks: [{ label, url, packagePrice, costPerDose }],  // per-retailer; packagePrice/costPerDose null if not yet known
-  note,                               // freeform editorial note shown on the site
-  image,                              // filename in /public/images/
+  id, name, form, origin, standardDosage, algMg, sodiumMg, image, note,
+  costPerDose,   // best fresh, in-stock $/dose across offers (null if none) — used for sorting
+  offers: [{ key, retailer, packSize, doses, url, isAmazon, price, costPerDose, inStock, checkedAt }],
 }
 ```
 
-**Live data source:** Google Sheet published CSV, fetched server-side, revalidated every hour.
-Sheet columns (0-indexed):
-- 0:Name, 1:Package Size, 2:Form, 3:Origin, 4:Standard Dosage, 5:Alginate mg, 6:Sodium mg, 7:Doses per Package
-- 8:Amazon Package Price, 9:Amazon Cost per dose, 10:Amazon URL, 11:Amazon URL affiliate link
-- 12:2nd Retailer Label, 13:2nd Retailer Package Price, 14:2nd Retailer Cost Per Dose, 15:2nd Retailer URL
-- 16:Image, 17:Note
-
-Parser uses col 11 (affiliate link) for the Amazon buy URL, falling back to col 10 if col 11 is empty.
-
-Fields still needing population:
-- `packagePrice` / `costPerDose` on 2nd retailer buyLinks for products where site prices are unknown
-
 ---
 
-## Products tracked (9 total)
+## Products tracked (8 formulations, 18 offers)
 
-| Brand | Variant | Origin | $/dose |
-|---|---|---|---|
-| Reflux Gourmet | 8 oz liquid | US | $0.60 |
-| Reflux Gourmet | 25 single-serve packs | US | $1.28 |
-| Reflux Raft | 8 oz liquid | US | $0.70 |
-| Gaviscon Advance Chewable | 60 ct | UK import | $0.32 |
-| Gaviscon Advance Chewable | 120 ct (2-pack) | UK import | **$0.25** ← cheapest |
-| Gaviscon Double Action Tablets | 48 ct | UK import | $0.50 |
-| Gaviscon Double Action Liquid | 600ml | UK import | $0.87 |
-| Gaviscon Advance Liquid ("Gav") | 500ml | UK import | $0.36 |
-| HartSpan Khelp | 60 capsules | US | $1.80 |
+Reflux Gourmet, Reflux Raft, Gaviscon Advance Chewable, Gaviscon Double Action Tablets, Gaviscon Double Action Liquid, Gaviscon Advance Liquid ("Gav"), HartSpan Khelp, Refluxter. See the Offers tab for stores and pack sizes.
 
-Missing: **Refluxter** (by Nutritist.us) — most-cited sodium alginate product online, ~1100mg/dose. Should be added to sheet to be comprehensive and compete for AI citations.
+Spotted but not yet added: Life Extension "Esophageal Guardian" (alginic acid chewable, Amazon B00SJNL5E0); larger Gaviscon Advance Chewable multi-packs on Amazon (3/6/12-pack).
 
 ---
 
 ## What's built
 
-- Comparison table: sortable by $/dose (default), alginate/dose, sodium/dose, container price, doses
+- Comparison table: sortable by best $/dose (default), alginate, sodium, name
 - Filter pills: All / Liquid / Tablet
 - Responsive: full columns on desktop, Product + $/dose + Buy on mobile
 - Product image thumbnails with initials fallback
-- Multiple buy links per product — each retailer gets its own sub-row with its own $/dose
+- One sub-row per offer (store × pack size) with package price, "as of" timestamp, $/dose, stock status; out-of-stock offers dimmed and excluded from best value
 - Amazon gets a distinct amber button; other retailers get a text link style
 - Standard dosage sub-line in Form column
 - Per-product editorial notes (italic, shown under product name)
 - Origin badge (US = blue, UK import = orange)
 - "Best value" badge on the cheapest $/dose row across all products and retailers
 - SEO intro copy explaining sodium alginate and the US Gaviscon difference
-- Live Google Sheet CMS (ISR, revalidated hourly; fallback to hardcoded data)
+- Automatic price + stock tracking every 3h (see "Data & automatic price tracking"), alerts via GitHub issue
 - Deployed to Vercel at alginatecompare.com
 
 ---
@@ -158,11 +143,12 @@ The site currently feels like a neutral tool. Goal: soften the tone and make it 
 - XML sitemap at `/sitemap.xml`
 - Each product gets a short written blurb (can live in sheet Note column or as MDX)
 
-### 9. Amazon Associates affiliate account
-Apply once site has content indexed and some traffic. Health/personal care pays 1–4% commission. Requires 3 qualifying sales within 180 days of approval.
+### 10. Price automation follow-ups
+- **Amazon Creators API:** code is in place; needs the Creators API app credentials added as GitHub secrets. Account `alginatecompa-20` was at ~6 shipped orders / 30 days in Oct 2026 (needs 10). Once eligible, prices appear automatically. First time it's live, run with `--debug-amazon` to confirm the response parsing (field names were inferred from partial docs).
+- **New-product discovery (weekly):** search for new sodium alginate products (Amazon/Google Shopping/Shopify brands), have a cheap Claude model extract alginate mg/dose, pack size, form; append to the sheet's **Candidates** tab for Chris to approve. Never auto-publish. Writing to the sheet needs a Google service account with edit access.
+- **Brand affiliate programs:** Reflux Gourmet reportedly pays ~14% via FlexOffers/Impact (vs Amazon's 1–4%). Ask Nutritist, HartSpan, Reflux Raft. Swap affiliate URLs into the Offers tab once approved.
 
-### 10. Add Refluxter to comparison table
-Nutritist.us product, ~1100mg alginate/dose. Most-cited sodium alginate product online — its absence makes the site feel incomplete to anyone who's researched the topic. Add to sheet when pricing is confirmed.
+### ~~Add Refluxter~~ ✅ DONE
 
 ---
 
@@ -175,6 +161,6 @@ Nutritist.us product, ~1100mg alginate/dose. Most-cited sodium alginate product 
 ## Dev workflow
 
 - `npm run dev` starts at `localhost:3000` (or port 3002 per `.claude/launch.json`)
-- Sheet changes: edit the Google Sheet → Vercel auto-refreshes within 1 hour, or use Redeploy in Vercel dashboard for instant update
+- Sheet changes: edit the Products/Offers tabs → picked up on the next price run (every 3h), or run the "Update prices" workflow in GitHub Actions for an immediate refresh
 - Images go in `public/images/`
 - To force-push large image files that fail with HTTP 400: `git config http.postBuffer 157286400` then push again
