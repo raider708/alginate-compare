@@ -42,7 +42,7 @@ function BuyButton({ offer }) {
       href={offer.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-xs text-teal-600 hover:text-teal-800 hover:underline font-medium sm:whitespace-nowrap"
+      className="text-xs text-teal-600 hover:text-teal-800 hover:underline font-medium xl:whitespace-nowrap"
     >
       {offer.retailer} ↗
     </a>
@@ -122,10 +122,10 @@ export default function ProductTable({ products }) {
               >
                 Product<SortIcon col="name" />
               </th>
-              <th className="text-left px-2 sm:px-3 py-3 font-semibold text-gray-600 hidden sm:table-cell">
+              <th className="text-left px-2 sm:px-3 py-3 font-semibold text-gray-600 hidden md:table-cell">
                 Form
               </th>
-              <th className="text-right px-2 sm:px-3 py-3 font-semibold whitespace-nowrap hidden md:table-cell">
+              <th className="text-right px-2 sm:px-3 py-3 font-semibold whitespace-nowrap hidden xl:table-cell">
                 <div className="text-gray-600 font-semibold mb-0.5">Per dose</div>
                 {SORT_COLS.map(({ key, label }) => (
                   <button
@@ -140,7 +140,7 @@ export default function ProductTable({ products }) {
                 ))}
               </th>
               <th className="text-left px-2 sm:px-3 py-3 font-semibold text-gray-600 hidden sm:table-cell min-w-40">Store &amp; size</th>
-              <th className="text-right px-2 sm:px-3 py-3 font-semibold text-gray-600 hidden md:table-cell">Price</th>
+              <th className="text-right px-2 sm:px-3 py-3 font-semibold text-gray-600 hidden xl:table-cell">Price</th>
               <th
                 className={`text-right px-2 sm:px-3 py-3 font-semibold cursor-pointer select-none whitespace-nowrap ${
                   sortBy === 'costPerDose' ? 'text-teal-700' : 'text-gray-600 hover:text-teal-600'
@@ -200,14 +200,14 @@ export default function ProductTable({ products }) {
                           </div>
                         </td>
 
-                        <td rowSpan={rowCount} className={`px-2 sm:px-3 py-3 align-top hidden sm:table-cell ${productBorder}`}>
+                        <td rowSpan={rowCount} className={`px-2 sm:px-3 py-3 align-top hidden md:table-cell ${productBorder}`}>
                           <div className="text-gray-600 capitalize">{p.form}</div>
                           {p.standardDosage && (
                             <div className="text-xs text-gray-400 mt-0.5">{p.standardDosage}</div>
                           )}
                         </td>
 
-                        <td rowSpan={rowCount} className={`px-2 sm:px-3 py-3 text-right align-top whitespace-nowrap hidden md:table-cell ${productBorder}`}>
+                        <td rowSpan={rowCount} className={`px-2 sm:px-3 py-3 text-right align-top whitespace-nowrap hidden xl:table-cell ${productBorder}`}>
                           <div className="text-gray-700">{p.algMg}mg <span className="text-xs text-gray-400">alginate</span></div>
                           {p.sodiumMg > 0 && (
                             <div className="text-gray-700">{p.sodiumMg}mg <span className="text-xs text-gray-400">sodium</span></div>
@@ -226,7 +226,7 @@ export default function ProductTable({ products }) {
                       </td>
 
                       {/* ── Per-offer: package price ── */}
-                      <td className={`px-2 sm:px-3 py-3 text-right hidden md:table-cell ${offerBorder}`}>
+                      <td className={`px-2 sm:px-3 py-3 text-right hidden xl:table-cell ${offerBorder}`}>
                         {offer?.price != null ? (
                           <div className={dim}>
                             <div className="text-gray-700">${offer.price.toFixed(2)}</div>
@@ -248,7 +248,7 @@ export default function ProductTable({ products }) {
                             {outOfStock && <div className="text-xs text-red-600 font-medium">Out of stock</div>}
                           </div>
                         ) : offer?.isAmazon ? (
-                          <span className="hidden sm:inline text-xs text-gray-400 whitespace-nowrap">See price on Amazon</span>
+                          <span className="hidden xl:inline text-xs text-gray-400 whitespace-nowrap">See price on Amazon</span>
                         ) : (
                           <span className="text-gray-300 text-xs">—</span>
                         )}
