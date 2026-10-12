@@ -51,13 +51,16 @@ try {
   catalog = await loadCatalog({ productsSource: args.products, offersSource: args.offers })
   catalog.problems.push(...seedProblems)
 } catch (e) {
-  if (!prev) throw e
-  // Keep the site working on the last good catalog; the alert tells you to fix the sheet.
-  console.warn(`Couldn't load catalog (${e.message}); reusing previous catalog`)
+  // Keep the site working on the last good catalog (or the seed copy on a first run);
+  // the alert tells you to fix the sheet.
+  console.warn(`Couldn't load catalog (${e.message}); using ${prev ? 'previous catalog' : 'data/seed'}`)
+  const fallback = prev
+    ? { products: prev.products, offers: prev.offers.map(({ productId, retailer, packSize, doses, url, variant }) => ({ productId, retailer, packSize, doses, url, variant })) }
+    : await loadCatalog({ productsSource: 'data/seed/products.csv', offersSource: 'data/seed/offers.csv' })
   catalog = {
-    products: prev.products,
-    offers: prev.offers.map(({ productId, retailer, packSize, doses, url, variant }) => ({ productId, retailer, packSize, doses, url, variant })),
-    problems: [{ key: 'catalog:unreadable', message: `Couldn't read the Google Sheet, so the site is using the last good copy: ${e.message}` }],
+    products: fallback.products,
+    offers: fallback.offers,
+    problems: [{ key: 'catalog:unreadable', message: `Couldn't read the Google Sheet, so the price checker is using ${prev ? 'the last good copy' : 'the copy saved in the repo'}: ${e.message}` }],
   }
 }
 const problems = [...catalog.problems]

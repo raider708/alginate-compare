@@ -5,6 +5,10 @@ import { parseCSVObjects } from './csv.mjs'
 async function readSource(source) {
   if (/^https?:\/\//.test(source)) {
     const res = await fetch(source)
+    // An unpublished tab answers 401/403, or with Google's sign-in page instead of CSV.
+    if (res.status === 401 || res.status === 403 || (res.ok && (res.headers.get('content-type') ?? '').includes('text/html'))) {
+      throw new Error('a sheet tab isn\'t published as CSV. In the sheet: File → Share → Publish to web → include the Products and Offers tabs')
+    }
     if (!res.ok) throw new Error(`Could not fetch ${source}: HTTP ${res.status}`)
     return res.text()
   }

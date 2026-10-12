@@ -30,7 +30,7 @@ Prices are **never typed in by hand**. The flow:
    - **Products**: `ID, Name, Form, Origin, Standard Dosage, Alginate mg, Sodium mg, Image, Note` (one row per formulation)
    - **Offers**: `Product ID, Retailer, Pack Size, Doses, URL, Variant` (one row per store × pack size; no prices). `Variant` picks a Shopify option by name (e.g. "1-month subscription"); default is the non-subscription option. Any Amazon link form works (amzn.to, a.co, /dp/ASIN).
    - **Candidates**: for the upcoming new-product discovery job (not built yet).
-   Seed copies of the tabs live in `data/seed/*.csv`. The old single tab (gid=0, `SHEET_CSV_URL`) is no longer read.
+   Tab gids: Products 101, Offers 102, Candidates 103 (published-CSV URLs use `pub?gid=<gid>&single=true&output=csv`; each tab must be included in File → Share → Publish to web). Seed copies live in `data/seed/*.csv` and are used if the sheet can't be read on a first run. The old Sheet1 tab (gid 0, `SHEET_CSV_URL`) is no longer read.
 2. **`scripts/update-prices.mjs`** runs every 3 hours in GitHub Actions (`.github/workflows/update-prices.yml`, also has a manual "Run workflow" button). It reads the Products/Offers tabs (repo variables `SHEET_PRODUCTS_CSV_URL`, `SHEET_OFFERS_CSV_URL`), then:
    - **Shopify stores** (Reflux Gourmet, Reflux Raft, HartSpan, Nutritist, British Essentials): reads `/products/<handle>.js` for price + stock. Any Shopify store works automatically.
    - **Amazon**: Creators API (`scripts/lib/amazon.mjs`), secrets `AMAZON_CREDENTIAL_ID` / `AMAZON_CREDENTIAL_SECRET` (credential version 3.1). Needs 10 qualifying sales in the trailing 30 days; when not eligible the API says so and the script falls back to just checking links (404 = dead). Eligibility switches on/off by itself.
