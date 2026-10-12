@@ -41,9 +41,15 @@ const prevOffers = new Map((prev?.offers ?? []).map(o => [o.key, o]))
 
 // ── Catalog ───────────────────────────────────────────────────────────────────
 let catalog
+const seedProblems = []
+if (!args.products || !args.offers) {
+  args.products ||= 'data/seed/products.csv'
+  args.offers ||= 'data/seed/offers.csv'
+  seedProblems.push({ key: 'catalog:not-connected', message: 'The Google Sheet tabs aren\'t connected yet (repo variables SHEET_PRODUCTS_CSV_URL / SHEET_OFFERS_CSV_URL), so the checker is using the copies in data/seed/. Edits to the sheet won\'t show up until they are set.' })
+}
 try {
-  if (!args.products || !args.offers) throw new Error('Sheet URLs not configured (SHEET_PRODUCTS_CSV_URL / SHEET_OFFERS_CSV_URL)')
   catalog = await loadCatalog({ productsSource: args.products, offersSource: args.offers })
+  catalog.problems.push(...seedProblems)
 } catch (e) {
   if (!prev) throw e
   // Keep the site working on the last good catalog; the alert tells you to fix the sheet.
