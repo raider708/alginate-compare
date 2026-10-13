@@ -19,6 +19,7 @@
     "sanity": "^5.30.0"
   },
   "devDependencies": {
+    "@anthropic-ai/sdk": "^0.133.0",
     "@tailwindcss/postcss": "^4",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",

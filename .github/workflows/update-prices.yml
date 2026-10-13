@@ -14,7 +14,7 @@ permissions:
   issues: write
 
 concurrency:
-  group: update-prices
+  group: data-branch          # shared with discover-products: one writer at a time
   cancel-in-progress: false
 
 jobs:
@@ -47,12 +47,14 @@ jobs:
         run: node scripts/update-prices.mjs --prev "$RUNNER_TEMP/prev" --out "$RUNNER_TEMP/out"
 
       # One commit, force-pushed: the branch holds only the latest files (history.csv
-      # carries the price history), so it never grows.
+      # carries the price history), so it never grows. Files this job doesn't write
+      # (candidates.csv from discover-products) are carried over.
       - name: Publish to data branch
         working-directory: ${{ runner.temp }}/out
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          rsync -a --ignore-existing "$RUNNER_TEMP/prev/" ./
           git init -q -b data
           git config user.name "price-checker[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

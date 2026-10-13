@@ -1,0 +1,62 @@
+name: Discover products
+
+# Once a week, Claude searches the web for sodium alginate products (or cheaper stores)
+# not on the site yet. New finds are appended to candidates.csv on the `data` branch,
+# which the sheet's Candidates tab shows, and announced in a `product-discovery` issue.
+
+on:
+  schedule:
+    - cron: '23 14 * * 1'   # Mondays, 14:23 UTC (7:23 AM Pacific)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: data-branch          # shared with update-prices: one writer at a time
+  cancel-in-progress: false
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Get previous data
+        run: |
+          mkdir -p "$RUNNER_TEMP/prev"
+          if git fetch --depth=1 origin data 2>/dev/null; then
+            git --work-tree="$RUNNER_TEMP/prev" checkout FETCH_HEAD -- .
+          fi
+
+      - name: Search for new products
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SHEET_PRODUCTS_CSV_URL: ${{ vars.SHEET_PRODUCTS_CSV_URL }}
+          SHEET_OFFERS_CSV_URL: ${{ vars.SHEET_OFFERS_CSV_URL }}
+          SHEET_EDIT_URL: ${{ vars.SHEET_EDIT_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/discover-products.mjs --prev "$RUNNER_TEMP/prev" --out "$RUNNER_TEMP/out"
+
+      # Keep the price checker's files, then publish as a single force-pushed commit.
+      - name: Publish to data branch
+        working-directory: ${{ runner.temp }}/out
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          rsync -a --ignore-existing "$RUNNER_TEMP/prev/" ./
+          git init -q -b data
+          git config user.name "price-checker[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Product discovery $(date -u +%Y-%m-%d)"
+          git push -q -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" data

@@ -21,6 +21,7 @@ import { loadCatalog, isAmazonUrl, offerKey } from './lib/catalog.mjs'
 import { fetchShopifyOffer } from './lib/shopify.mjs'
 import { resolveAsin, fetchAmazonPrices, checkAmazonLink } from './lib/amazon.mjs'
 import { parseCSV, toCSV } from './lib/csv.mjs'
+import { hasGitHub, gh, ensureLabel } from './lib/github.mjs'
 
 const HISTORY_HEADER = ['checked_at', 'product_id', 'retailer', 'pack_size', 'price', 'in_stock', 'url']
 
@@ -155,7 +156,8 @@ await writeFile(path.join(args.out, 'latest.json'), JSON.stringify(snapshot, nul
 await writeFile(path.join(args.out, 'vercel.json'), JSON.stringify({ git: { deploymentEnabled: false } }, null, 2) + '\n')
 await writeFile(path.join(args.out, 'README.md'),
   '# Price data\n\nWritten automatically by `scripts/update-prices.mjs` on the `main` branch. Do not edit by hand.\n\n' +
-  '- `latest.json`: the current snapshot the site reads\n- `history.csv`: price and stock changes over time (store-site prices only; Amazon prices are not stored, per Associates rules)\n')
+  '- `latest.json`: the current snapshot the site reads\n- `history.csv`: price and stock changes over time (store-site prices only; Amazon prices are not stored, per Associates rules)\n' +
+  '- `candidates.csv`: possible new products found by `scripts/discover-products.mjs` (shown on the sheet\'s Candidates tab)\n')
 await writeHistory()
 
 // ── Report ────────────────────────────────────────────────────────────────────
@@ -173,7 +175,7 @@ if (process.env.GITHUB_STEP_SUMMARY) {
     `### Price check\n${results.length} offers, ${priced} priced this run. Amazon: **${amazon.status}**\n\n` +
     (problems.length ? problems.map(p => `- ${p.message}`).join('\n') : 'No problems.') + '\n')
 }
-if (process.env.GITHUB_TOKEN && process.env.GITHUB_REPOSITORY) {
+if (hasGitHub()) {
   await syncAlertIssue({ problems, added, resolved, amazonChange })
 }
 
@@ -207,21 +209,8 @@ function describeAmazonChange(before, after) {
 }
 
 async function syncAlertIssue({ problems, added, resolved, amazonChange }) {
-  const repo = process.env.GITHUB_REPOSITORY
-  const gh = async (method, url, body) => {
-    const res = await fetch(`https://api.github.com/repos/${repo}${url}`, {
-      method,
-      headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
-      body: body ? JSON.stringify(body) : undefined,
-    })
-    if (!res.ok && !(method === 'POST' && url === '/labels' && res.status === 422)) {
-      throw new Error(`GitHub ${method} ${url}: HTTP ${res.status} ${await res.text()}`)
-    }
-    return res.status === 204 ? null : res.json()
-  }
-
   const LABEL = 'price-tracker'
-  await gh('POST', '/labels', { name: LABEL, color: '0d9488', description: 'Automatic price checker alerts' })
+  await ensureLabel(LABEL, '0d9488', 'Automatic price checker alerts')
   const [issue] = await gh('GET', `/issues?labels=${LABEL}&state=open&per_page=1`)
 
   const body = '_Kept up to date by the price checker. It closes itself when everything is fixed._\n\n' +
