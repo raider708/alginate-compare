@@ -50,6 +50,9 @@ async function getToken({ credentialId, credentialSecret }) {
     signal: AbortSignal.timeout(20_000),
   })
   const body = await res.text()
+  if (/invalid_client/.test(body)) {
+    throw new Error('Amazon rejected the Creators API credentials: the ID and secret don\'t match an active credential. Re-enter the AMAZON_CREDENTIAL_SECRET (and ID) GitHub secrets from the Creators API page')
+  }
   if (!res.ok) throw new Error(`Amazon login failed (HTTP ${res.status}): ${body.slice(0, 300)}`)
   return JSON.parse(body).access_token
 }
