@@ -144,7 +144,7 @@ The site currently feels like a neutral tool. Goal: soften the tone and make it 
 - Each product gets a short written blurb (can live in sheet Note column or as MDX)
 
 ### 10. Price automation follow-ups
-- **Amazon Creators API:** code is in place; needs the Creators API app credentials added as GitHub secrets. Account `alginatecompa-20` was at ~6 shipped orders / 30 days in Oct 2026 (needs 10). Once eligible, prices appear automatically. First time it's live, run with `--debug-amazon` to confirm the response parsing (field names were inferred from partial docs).
+- **Amazon Creators API:** code is in place and credentials are set (app `alginatecompare-price-checker`, credential v3.1, secrets added 2026-10-13; sign-in verified, API answers "not eligible"). Account `alginatecompa-20` was at ~6 shipped orders / 30 days in Oct 2026 (needs 10). Once eligible, prices appear automatically. First time it's live, run with `--debug-amazon` to confirm the response parsing (field names were inferred from partial docs).
 - **New-product discovery (weekly):** search for new sodium alginate products (Amazon/Google Shopping/Shopify brands), have a cheap Claude model extract alginate mg/dose, pack size, form; append to the sheet's **Candidates** tab for Chris to approve. Never auto-publish. Writing to the sheet needs a Google service account with edit access.
 - **Brand affiliate programs:** Reflux Gourmet reportedly pays ~14% via FlexOffers/Impact (vs Amazon's 1–4%). Ask Nutritist, HartSpan, Reflux Raft. Swap affiliate URLs into the Offers tab once approved.
 
