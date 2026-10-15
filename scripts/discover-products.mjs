@@ -105,7 +105,7 @@ for (const o of catalog.offers) knownKeys.add(listingKey(o.url, asinByUrl.get(o.
 for (const r of prevRows) knownKeys.add(listingKey(r[3]))
 
 // ── Ask Claude ───────────────────────────────────────────────────────────────
-const usage = { input: 0, output: 0, cacheRead: 0, searches: 0, fetches: 0 }
+const usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, searches: 0, fetches: 0 }
 const skipped = !args['candidates-json'] && !process.env.ANTHROPIC_API_KEY
 if (skipped) console.warn('ANTHROPIC_API_KEY is not set, so the web search was skipped. Add it as a GitHub secret to turn discovery on.')
 const found = args['candidates-json']
@@ -143,7 +143,7 @@ await writeFile(path.join(args.out, 'candidates.csv'), toCSV([HEADER, ...prevRow
 
 const summary = skipped ? 'Search skipped: ANTHROPIC_API_KEY secret not set.' :
   `${found.length} found, ${newRows.length} new after removing ones already listed or suggested.` +
-  (args['candidates-json'] ? '' : ` Claude usage: ${usage.input} input + ${usage.output} output tokens (${usage.cacheRead} cached), ${usage.searches} searches, ${usage.fetches} page fetches.`)
+  (args['candidates-json'] ? '' : ` Claude usage: ${usage.input} input, ${usage.cacheWrite} cache-write, ${usage.cacheRead} cache-read, ${usage.output} output tokens; ${usage.searches} searches, ${usage.fetches} page fetches; about $${estimateCost().toFixed(2)}.`)
 console.log(summary)
 for (const r of newRows) console.log(`  + ${r[1]} — ${r[2]} ${r[3]}`)
 if (process.env.GITHUB_STEP_SUMMARY) {
@@ -223,10 +223,16 @@ async function askClaude() {
   return JSON.parse(json).candidates
 }
 
+// Claude Opus 5.5 list prices: $4 / MTok input, $5 cache write (5-minute), $0.20 cache read, $20 output; web search $10 / 1,000.
+function estimateCost() {
+  return (usage.input * 4 + usage.cacheWrite * 5 + usage.cacheRead * 0.2 + usage.output * 20) / 1e6 + usage.searches * 0.01
+}
+
 function tally(u) {
   usage.input += u.input_tokens ?? 0
   usage.output += u.output_tokens ?? 0
   usage.cacheRead += u.cache_read_input_tokens ?? 0
+  usage.cacheWrite += u.cache_creation_input_tokens ?? 0
   usage.searches += u.server_tool_use?.web_search_requests ?? 0
   usage.fetches += u.server_tool_use?.web_fetch_requests ?? 0
 }
