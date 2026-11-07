@@ -1,0 +1,10 @@
+checked_at,product_id,retailer,pack_size,price,in_stock,url
+2026-10-12T03:37:39.125Z,reflux-gourmet,Reflux Gourmet,8 oz,28,true,https://refluxgourmet.com/products/vanilla-caramel-rescue
+2026-10-12T03:37:39.125Z,reflux-gourmet,Reflux Gourmet,25 single-serve packs,34,false,https://refluxgourmet.com/products/single-serve-multipack
+2026-10-12T03:37:39.125Z,reflux-raft,Reflux Raft,8 oz,32.99,true,https://refluxraft.com/products/lemon-ginger
+2026-10-12T03:37:39.125Z,gaviscon-double-action-liquid,British Essentials,500 ml,61.79,true,https://us.britishessentials.com/products/gaviscon-double-action-liquid-heartburn-indigestion-relief-mint-500ml-copy
+2026-10-12T03:37:39.125Z,gaviscon-advance-liquid,British Essentials,250 ml,33.99,true,https://us.britishessentials.com/products/gaviscon-advance-double-strength-heartburn-indigestion-aniseed-300ml
+2026-10-12T03:37:39.125Z,hartspan-khelp,HartSpan,60 capsules,54,true,https://hartspan.com/products/khelp
+2026-10-12T03:37:39.125Z,hartspan-khelp,HartSpan,60 capsules (monthly subscription),46,true,https://hartspan.com/products/khelp
+2026-10-12T03:37:39.125Z,refluxter,Nutritist,60 capsules,32.99,true,https://www.nutritist.us/products/refluxter-acid-reflux-support
+2026-10-13T00:46:48.521Z,reflux-gourmet,Reflux Gourmet,25 single-serve packs,34,true,https://refluxgourmet.com/products/single-serve-multipack
