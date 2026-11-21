@@ -26,7 +26,7 @@ import { fetchShopifyOffer, shopifyJsonUrl } from './lib/shopify.mjs'
 import { resolveAsin } from './lib/amazon.mjs'
 import { hasGitHub, gh, ensureLabel } from './lib/github.mjs'
 
-const MODEL = 'claude-opus-5-5'
+const MODEL = 'claude-sonnet-5-5'
 const BETAS = ['server-side-fallback-2026-07-01']   // re-runs a declined request on Anthropic's recommended fallback model
 const MAX_NEW_PER_RUN = 15
 const HEADER = ['Found', 'Name', 'Retailer', 'URL', 'Price', 'Pack Size', 'Alginate mg per dose', 'Why flagged']
@@ -223,9 +223,9 @@ async function askClaude() {
   return JSON.parse(json).candidates
 }
 
-// Claude Opus 5.5 list prices: $4 / MTok input, $5 cache write (5-minute), $0.20 cache read, $20 output; web search $10 / 1,000.
+// Claude Sonnet 5.5 list prices: $2 / MTok input, $2.50 cache write (5-minute), $0.20 cache read, $10 output; web search $10 / 1,000.
 function estimateCost() {
-  return (usage.input * 4 + usage.cacheWrite * 5 + usage.cacheRead * 0.2 + usage.output * 20) / 1e6 + usage.searches * 0.01
+  return (usage.input * 2 + usage.cacheWrite * 2.5 + usage.cacheRead * 0.2 + usage.output * 10) / 1e6 + usage.searches * 0.01
 }
 
 function tally(u) {
