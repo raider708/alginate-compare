@@ -59,11 +59,11 @@ Run locally: `node scripts/update-prices.mjs --out /tmp/prices --products data/s
 
 ---
 
-## Products tracked (8 formulations, 18 offers)
+## Products tracked (11 formulations, 31 offers)
 
-Reflux Gourmet, Reflux Raft, Gaviscon Advance Chewable, Gaviscon Double Action Tablets, Gaviscon Double Action Liquid, Gaviscon Advance Liquid ("Gav"), HartSpan Khelp, Refluxter. See the Offers tab for stores and pack sizes.
+Reflux Gourmet, Reflux Raft, Reflux Raft Midnight Berry PM, Gaviscon Advance Chewable, Gaviscon Double Action Tablets, Gaviscon Double Action Liquid, Gaviscon Advance Liquid ("Gav"), HartSpan Khelp, Refluxter, Peptac Liquid, Life Extension Esophageal Guardian. See the Offers tab for stores and pack sizes.
 
-Spotted but not yet added: Life Extension "Esophageal Guardian" (alginic acid chewable, Amazon B00SJNL5E0); larger Gaviscon Advance Chewable multi-packs on Amazon (3/6/12-pack).
+Open questions: Reflux Raft's own pages no longer state tube size or alginate mg (Amazon lists 10 oz / 60 servings; the catalog still says 8 oz / 47 doses / 338 mg). Peptac, Life Extension and Reflux Raft PM have no product image yet. Amazon now shows AI agents an "Access restricted" page; don't browse it.
 
 ---
 

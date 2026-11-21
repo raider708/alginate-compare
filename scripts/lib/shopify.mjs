@@ -14,7 +14,14 @@ export async function fetchShopifyOffer({ url, variant }) {
   const jsonUrl = shopifyJsonUrl(url)
   if (!jsonUrl) return { supported: false }
 
-  const res = await fetch(jsonUrl, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(20_000) })
+  // Shopify rate-limits by IP (HTTP 429); back off and retry rather than report a false error.
+  let res
+  for (let attempt = 0; attempt < 3; attempt++) {
+    res = await fetch(jsonUrl, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(20_000) })
+    if (res.status !== 429) break
+    await new Promise(r => setTimeout(r, 10_000 * (attempt + 1)))
+  }
+  if (res.status === 429) throw new Error('Store is rate-limiting requests (429); will retry next run')
   if (res.status === 404) throw new Error('Product page not found (404) — the link may be dead or the product discontinued')
   if (!res.ok) throw new Error(`Store returned HTTP ${res.status}`)
 
