@@ -192,7 +192,8 @@ for (const r of newRows) console.log(`  + ${r[1]} — ${r[2]} ${r[3]}\n    ${r[7
 if (process.env.GITHUB_STEP_SUMMARY) {
   await appendFile(process.env.GITHUB_STEP_SUMMARY, `### Product discovery\n${summary}\n\n${newRows.map(r => `- ${r[1]} (${r[2]}) ${r[3]}`).join('\n')}\n`)
 }
-const issueUrl = hasGitHub() && newRows.length ? await announce(newRows) : null
+// A GitHub hiccup shouldn't stop the email.
+const issueUrl = hasGitHub() && newRows.length ? await announce(newRows).catch(e => { console.error(`Couldn't open the GitHub issue: ${e.message}`); process.exitCode = 1; return null }) : null
 
 if (args['email-dir']) {
   const { subject, html } = buildReport({ snapshot: prevSnapshot, newRows, summary, issueUrl, sheetUrl: process.env.SHEET_EDIT_URL, today, failed })
@@ -353,7 +354,7 @@ async function announce(rows) {
   return issue.html_url
 }
 
-const isAuto = r => r[7].startsWith('AUTO-ADDED')
+function isAuto(r) { return r[7].startsWith('AUTO-ADDED') }
 
 function announcement(rows, sheet) {
   const line = r => `- **${r[1]}**, ${r[2]}${r[4] ? `, ${r[4]}` : ''}${r[6] !== '' ? `, ${r[6]} mg alginate per dose` : ''}\n  ${r[3]}`
