@@ -300,7 +300,11 @@ function autoApprove(c, { check, asin, price }) {
   const product = productsById.get(c.product_id)
   if (c.kind !== 'new_store') reasons.push('new product (needs dosage and sodium details on the Products tab)')
   else if (!product) reasons.push(`couldn't match it to a listed product${c.product_id ? ` ("${c.product_id}")` : ''}`)
-  if (c.confidence !== 'high') reasons.push(`${c.confidence} confidence`)
+  // Medium is enough when the store's own data confirmed the price and stock (Shopify).
+  const verified = check.price != null
+  if (!(c.confidence === 'high' || (c.confidence === 'medium' && verified))) {
+    reasons.push(`${c.confidence} confidence${c.confidence === 'medium' ? ' and the price couldn\'t be checked at the store' : ''}`)
+  }
   if (!(c.doses_per_pack > 0)) reasons.push('doses per pack not stated')
   if (check.inStock === false) reasons.push('out of stock')
   if (product && c.alginate_mg_per_dose != null && product.algMg &&
