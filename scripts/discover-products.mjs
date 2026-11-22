@@ -139,7 +139,9 @@ try {
     ? JSON.parse(await readFile(args['candidates-json'], 'utf8')).candidates
     : skipped ? [] : await askClaude()
 } catch (e) {
-  failed = e.message
+  failed = e.status === 401 || /x-api-key|authentication_error/.test(e.message)
+    ? "The Claude API key was rejected (it has probably expired). Create a new key at console.anthropic.com → API Keys, then run: gh secret set ANTHROPIC_API_KEY --repo raider708/alginate-compare"
+    : e.message
   console.error(`Search failed: ${e.message}`)
 }
 
