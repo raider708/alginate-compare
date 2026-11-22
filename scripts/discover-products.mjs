@@ -18,6 +18,7 @@
 //   --products / --offers     catalog sources, as in update-prices.mjs
 //   --max-searches <n>        web searches Claude may run (default 12)
 //   --candidates-json <file>  skip Claude and post-process this JSON instead (for testing)
+//   --email-dir <dir>         write the weekly summary email (subject.txt, body.html) here
 
 import Anthropic from '@anthropic-ai/sdk'
 import { readFile, writeFile, mkdir, appendFile } from 'node:fs/promises'
@@ -29,6 +30,7 @@ import { parseCSV, toCSV } from './lib/csv.mjs'
 import { fetchShopifyOffer, shopifyJsonUrl } from './lib/shopify.mjs'
 import { resolveAsin } from './lib/amazon.mjs'
 import { hasGitHub, gh, ensureLabel } from './lib/github.mjs'
+import { buildReport } from './lib/email-report.mjs'
 
 const MODEL = 'claude-sonnet-5-5'
 const BETAS = ['server-side-fallback-2026-07-01']   // re-runs a declined request on Anthropic's recommended fallback model
@@ -90,6 +92,7 @@ const { values: args } = parseArgs({
     offers:            { type: 'string', default: process.env.SHEET_OFFERS_CSV_URL || 'data/seed/offers.csv' },
     'max-searches':    { type: 'string', default: '12' },
     'candidates-json': { type: 'string' },
+    'email-dir':       { type: 'string' },
   },
 })
 if (!args.out) throw new Error('--out is required')
@@ -127,9 +130,18 @@ for (const o of prevAuto) knownKeys.add(listingKey(o.url))
 const usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, searches: 0, fetches: 0 }
 const skipped = !args['candidates-json'] && !process.env.ANTHROPIC_API_KEY
 if (skipped) console.warn('ANTHROPIC_API_KEY is not set, so the web search was skipped. Add it as a GitHub secret to turn discovery on.')
-const found = args['candidates-json']
-  ? JSON.parse(await readFile(args['candidates-json'], 'utf8')).candidates
-  : skipped ? [] : await askClaude()
+// A failed search still writes the files and sends the email (saying it failed), then
+// exits with an error so the run shows red.
+let failed = null
+let found = []
+try {
+  found = args['candidates-json']
+    ? JSON.parse(await readFile(args['candidates-json'], 'utf8')).candidates
+    : skipped ? [] : await askClaude()
+} catch (e) {
+  failed = e.message
+  console.error(`Search failed: ${e.message}`)
+}
 
 // ── Filter, verify, append ───────────────────────────────────────────────────
 const newRows = []
@@ -170,7 +182,7 @@ const prevAutoFile = args.prev && path.join(args.prev, 'auto-offers.csv')
 const prevAutoRows = prevAutoFile && existsSync(prevAutoFile) ? parseCSV(await readFile(prevAutoFile, 'utf8')).slice(1) : []
 await writeFile(path.join(args.out, 'auto-offers.csv'), toCSV([AUTO_OFFERS_HEADER, ...prevAutoRows, ...autoRows]))
 
-const summary = skipped ? 'Search skipped: ANTHROPIC_API_KEY secret not set.' :
+const summary = failed ? `Search failed: ${failed}` : skipped ? 'Search skipped: ANTHROPIC_API_KEY secret not set.' :
   `${found.length} found, ${newRows.length} new after removing ones already listed or suggested; ${autoRows.length} added to the site automatically.` +
   (args['candidates-json'] ? '' : ` Claude usage: ${usage.input} input, ${usage.cacheWrite} cache-write, ${usage.cacheRead} cache-read, ${usage.output} output tokens; ${usage.searches} searches, ${usage.fetches} page fetches; about $${estimateCost().toFixed(2)}.`)
 console.log(summary)
@@ -178,7 +190,15 @@ for (const r of newRows) console.log(`  + ${r[1]} — ${r[2]} ${r[3]}\n    ${r[7
 if (process.env.GITHUB_STEP_SUMMARY) {
   await appendFile(process.env.GITHUB_STEP_SUMMARY, `### Product discovery\n${summary}\n\n${newRows.map(r => `- ${r[1]} (${r[2]}) ${r[3]}`).join('\n')}\n`)
 }
-if (hasGitHub() && newRows.length) await announce(newRows)
+const issueUrl = hasGitHub() && newRows.length ? await announce(newRows) : null
+
+if (args['email-dir']) {
+  const { subject, html } = buildReport({ snapshot: prevSnapshot, newRows, summary, issueUrl, sheetUrl: process.env.SHEET_EDIT_URL, today, failed })
+  await mkdir(args['email-dir'], { recursive: true })
+  await writeFile(path.join(args['email-dir'], 'subject.txt'), subject)
+  await writeFile(path.join(args['email-dir'], 'body.html'), html)
+}
+if (failed) process.exitCode = 1
 
 // ── Claude ───────────────────────────────────────────────────────────────────
 async function askClaude() {
@@ -323,11 +343,12 @@ async function announce(rows) {
     await gh('PATCH', `/issues/${old.number}`, { state: 'closed', state_reason: 'not_planned' })
   }
   const sheet = process.env.SHEET_EDIT_URL ? `[Candidates tab](${process.env.SHEET_EDIT_URL})` : 'Candidates tab of the sheet'
-  await gh('POST', '/issues', {
+  const issue = await gh('POST', '/issues', {
     title: `Product discovery ${today}: ${rows.filter(isAuto).length} added, ${rows.filter(r => !isAuto(r)).length} to review`,
     labels: [LABEL],
     body: announcement(rows, sheet),
   })
+  return issue.html_url
 }
 
 const isAuto = r => r[7].startsWith('AUTO-ADDED')
@@ -339,7 +360,7 @@ function announcement(rows, sheet) {
   return [
     auto.length && `### Added to the site\nThese passed every check (same product, high confidence, in stock, competitive price) and go live on the next price check. To undo one, mark it **Reject** on the ${sheet}.\n\n${auto.map(line).join('\n')}`,
     review.length && `### Needs your review\nTo list one, add it to the Products and Offers tabs (or ask Claude to). Mark the rest Reject on the ${sheet}.\n\n` +
-      review.map(r => `${line(r)}\n  _${r[7].match(/^NEEDS REVIEW: ([^.]*)/)?.[1] ?? ''}_`).join('\n'),
+      review.map(r => `${line(r)}\n  _${r[7].match(/^NEEDS REVIEW: (.*?)\. (?=New )/)?.[1] ?? ''}_`).join('\n'),
   ].filter(Boolean).join('\n\n')
 }
 

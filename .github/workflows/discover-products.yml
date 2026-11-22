@@ -48,7 +48,7 @@ jobs:
           SHEET_EDIT_URL: ${{ vars.SHEET_EDIT_URL }}
           AMAZON_PARTNER_TAG: ${{ vars.AMAZON_PARTNER_TAG }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/discover-products.mjs --prev "$RUNNER_TEMP/prev" --out "$RUNNER_TEMP/out"
+        run: node scripts/discover-products.mjs --prev "$RUNNER_TEMP/prev" --out "$RUNNER_TEMP/out" --email-dir "$RUNNER_TEMP/email"
 
       # Keep the price checker's files, then publish as a single force-pushed commit.
       - name: Publish to data branch
@@ -63,3 +63,15 @@ jobs:
           git add -A
           git commit -q -m "Product discovery $(date -u +%Y-%m-%d)"
           git push -q -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" data
+
+      # Weekly summary email (best prices, what was added, what needs review). Sent even
+      # when an earlier step failed, so a broken week doesn't go unnoticed.
+      - name: Email summary
+        if: always()
+        env:
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          SMTP_HOST: ${{ vars.SMTP_HOST }}
+          SMTP_PORT: ${{ vars.SMTP_PORT }}
+          EMAIL_TO: ${{ vars.EMAIL_TO }}
+        run: node scripts/send-email.mjs "$RUNNER_TEMP/email"
