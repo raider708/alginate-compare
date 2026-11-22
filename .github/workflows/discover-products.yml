@@ -3,6 +3,8 @@ name: Discover products
 # Once a week, Claude searches the web for sodium alginate products (or cheaper stores)
 # not on the site yet. New finds are appended to candidates.csv on the `data` branch,
 # which the sheet's Candidates tab shows, and announced in a `product-discovery` issue.
+# Confident new store listings for products already on the site also go to
+# auto-offers.csv, which the price checker lists automatically.
 
 on:
   schedule:
@@ -44,6 +46,7 @@ jobs:
           SHEET_PRODUCTS_CSV_URL: ${{ vars.SHEET_PRODUCTS_CSV_URL }}
           SHEET_OFFERS_CSV_URL: ${{ vars.SHEET_OFFERS_CSV_URL }}
           SHEET_EDIT_URL: ${{ vars.SHEET_EDIT_URL }}
+          AMAZON_PARTNER_TAG: ${{ vars.AMAZON_PARTNER_TAG }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/discover-products.mjs --prev "$RUNNER_TEMP/prev" --out "$RUNNER_TEMP/out"
 

@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 // Weekly: asks Claude to search the web for sodium alginate reflux products sold to US
 // buyers that aren't on the site yet, and appends them to candidates.csv on the `data`
-// branch. The sheet's Candidates tab displays that file (IMPORTDATA). Nothing reaches the
-// site until a product is added to the Products/Offers tabs by hand.
+// branch. The sheet's Candidates tab displays that file (IMPORTDATA).
+//
+// New stores and pack sizes for products already listed are added to the site by
+// themselves (auto-offers.csv) when they pass the checks in autoApprove(); marking one
+// Reject on the Candidates tab takes it off again. New products always wait for a person
+// to add them to the Products/Offers tabs, since they need dosage and sodium details.
 //
 // Runs in .github/workflows/discover-products.yml. Locally:
 //   ANTHROPIC_API_KEY=... node scripts/discover-products.mjs --out /tmp/disc \
@@ -20,7 +24,7 @@ import { readFile, writeFile, mkdir, appendFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { parseArgs } from 'node:util'
-import { loadCatalog, isAmazonUrl } from './lib/catalog.mjs'
+import { loadCatalog, isAmazonUrl, listingKey, readAutoOffers, AUTO_OFFERS_HEADER } from './lib/catalog.mjs'
 import { parseCSV, toCSV } from './lib/csv.mjs'
 import { fetchShopifyOffer, shopifyJsonUrl } from './lib/shopify.mjs'
 import { resolveAsin } from './lib/amazon.mjs'
@@ -29,6 +33,9 @@ import { hasGitHub, gh, ensureLabel } from './lib/github.mjs'
 const MODEL = 'claude-sonnet-5-5'
 const BETAS = ['server-side-fallback-2026-07-01']   // re-runs a declined request on Anthropic's recommended fallback model
 const MAX_NEW_PER_RUN = 15
+const PARTNER_TAG = process.env.AMAZON_PARTNER_TAG || 'alginatecompa-20'
+const MAX_PRICE_RATIO = 1.25        // auto-add only if within 25% of the product's best current $/dose
+const MG_TOLERANCE = 0.25           // a stated alginate amount must be within 25% of the catalog's
 const HEADER = ['Found', 'Name', 'Retailer', 'URL', 'Price', 'Pack Size', 'Alginate mg per dose', 'Why flagged']
 
 // ── Prompts and schema ───────────────────────────────────────────────────────
@@ -55,10 +62,11 @@ const CANDIDATES_SCHEMA = {
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['name', 'kind', 'retailer', 'url', 'price_usd', 'pack_size', 'doses_per_pack', 'alginate_mg_per_dose', 'evidence', 'why', 'confidence'],
+        required: ['name', 'kind', 'product_id', 'retailer', 'url', 'price_usd', 'pack_size', 'doses_per_pack', 'alginate_mg_per_dose', 'evidence', 'why', 'confidence'],
         properties: {
           name:                 { type: 'string', description: 'Brand and product name' },
           kind:                 { type: 'string', enum: ['new_product', 'new_store'] },
+          product_id:           { type: ['string', 'null'], description: 'For new_store: the ID of the listed product it is (exact same formulation), else null' },
           retailer:             { type: 'string' },
           url:                  { type: 'string', description: 'Product page URL' },
           price_usd:            { type: ['number', 'null'] },
@@ -97,12 +105,23 @@ catch (e) {
 }
 const prevSnapshot = await readJson(args.prev && path.join(args.prev, 'latest.json'))
 const prevRows = await readCandidateRows(args.prev && path.join(args.prev, 'candidates.csv'))
+const prevAuto = args.prev ? await readAutoOffers(path.join(args.prev, 'auto-offers.csv')) : []
+const productsById = new Map(catalog.products.map(p => [p.id, p]))
+
+// Best current $/dose per product, from the price checker's last run.
+const bestPerDose = new Map()
+for (const o of prevSnapshot?.offers ?? []) {
+  if (o.price == null || !o.doses || o.inStock === false) continue
+  const pd = o.price / o.doses
+  if (!(bestPerDose.get(o.productId) <= pd)) bestPerDose.set(o.productId, pd)
+}
 
 // ASINs for the catalog's short Amazon links come from the price checker's last run.
 const asinByUrl = new Map((prevSnapshot?.offers ?? []).filter(o => o.asin).map(o => [o.url, o.asin]))
 const knownKeys = new Set()
 for (const o of catalog.offers) knownKeys.add(listingKey(o.url, asinByUrl.get(o.url)))
 for (const r of prevRows) knownKeys.add(listingKey(r[3]))
+for (const o of prevAuto) knownKeys.add(listingKey(o.url))
 
 // ── Ask Claude ───────────────────────────────────────────────────────────────
 const usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, searches: 0, fetches: 0 }
@@ -114,6 +133,7 @@ const found = args['candidates-json']
 
 // ── Filter, verify, append ───────────────────────────────────────────────────
 const newRows = []
+const autoRows = []      // rows for auto-offers.csv
 for (const c of found) {
   if (newRows.length >= MAX_NEW_PER_RUN) break
   if (!c.url || !/^https?:\/\//.test(c.url)) continue
@@ -126,26 +146,35 @@ for (const c of found) {
   if (check.dead) { console.log(`  skip (dead link): ${c.name} ${c.url}`); continue }
   // Amazon prices may only be stored/shown when they come from Amazon's API.
   const price = asin || isAmazonUrl(c.url) ? null : (check.price ?? c.price_usd)
+  const url = asin ? `https://www.amazon.com/dp/${asin}` : c.url
+  const decision = autoApprove(c, { check, asin, price })
+  if (decision.ok) {
+    autoRows.push([today, c.product_id, asin ? 'Amazon' : c.retailer, c.pack_size, c.doses_per_pack, asin ? `${url}?tag=${PARTNER_TAG}` : url, ''])
+  }
   newRows.push([
     today,
     c.name,
     c.retailer,
-    asin ? `https://www.amazon.com/dp/${asin}` : c.url,
+    url,
     price != null ? `$${Number(price).toFixed(2)}` : '',
     c.doses_per_pack ? `${c.pack_size} (${c.doses_per_pack} doses)` : c.pack_size,
     c.alginate_mg_per_dose ?? '',
+    (decision.ok ? 'AUTO-ADDED to the site (mark Reject to remove). ' : `NEEDS REVIEW: ${decision.reasons.join('; ')}. `) +
     `${c.kind === 'new_store' ? 'New store for a product already listed' : 'New product'}. ${c.why} Evidence: ${c.evidence} (${c.confidence} confidence${check.inStock === false ? ', currently out of stock' : ''})`,
   ])
 }
 
 await mkdir(args.out, { recursive: true })
 await writeFile(path.join(args.out, 'candidates.csv'), toCSV([HEADER, ...prevRows, ...newRows]))
+const prevAutoFile = args.prev && path.join(args.prev, 'auto-offers.csv')
+const prevAutoRows = prevAutoFile && existsSync(prevAutoFile) ? parseCSV(await readFile(prevAutoFile, 'utf8')).slice(1) : []
+await writeFile(path.join(args.out, 'auto-offers.csv'), toCSV([AUTO_OFFERS_HEADER, ...prevAutoRows, ...autoRows]))
 
 const summary = skipped ? 'Search skipped: ANTHROPIC_API_KEY secret not set.' :
-  `${found.length} found, ${newRows.length} new after removing ones already listed or suggested.` +
+  `${found.length} found, ${newRows.length} new after removing ones already listed or suggested; ${autoRows.length} added to the site automatically.` +
   (args['candidates-json'] ? '' : ` Claude usage: ${usage.input} input, ${usage.cacheWrite} cache-write, ${usage.cacheRead} cache-read, ${usage.output} output tokens; ${usage.searches} searches, ${usage.fetches} page fetches; about $${estimateCost().toFixed(2)}.`)
 console.log(summary)
-for (const r of newRows) console.log(`  + ${r[1]} — ${r[2]} ${r[3]}`)
+for (const r of newRows) console.log(`  + ${r[1]} — ${r[2]} ${r[3]}\n    ${r[7].split('. ')[0]}`)
 if (process.env.GITHUB_STEP_SUMMARY) {
   await appendFile(process.env.GITHUB_STEP_SUMMARY, `### Product discovery\n${summary}\n\n${newRows.map(r => `- ${r[1]} (${r[2]}) ${r[3]}`).join('\n')}\n`)
 }
@@ -213,7 +242,10 @@ async function askClaude() {
     messages: [{
       role: 'user',
       content: 'Extract every product listing from this research report. Use only what the report states; use null for a number it doesn\'t give. ' +
-        'Skip anything the report says to exclude.\n\n<report>\n' + report + '\n</report>',
+        'Skip anything the report says to exclude. For a new store or pack size, set product_id to the matching ID below, only if it is the same ' +
+        'formulation (not a different strength, a gum, or a different product line); otherwise use null.\n\n<products>\n' +
+        catalog.products.map(p => `${p.id}: ${p.name}, ${p.form}, ${p.algMg} mg alginate per dose`).join('\n') +
+        '\n</products>\n\n<report>\n' + report + '\n</report>',
     }],
   })
   tally(extraction.usage)
@@ -238,18 +270,29 @@ function tally(u) {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-// Two links point at the same listing if they share an ASIN, or the same host + path
-// (ignoring query strings, "www.", and Shopify's /collections/<x>/ prefix).
-function listingKey(url, asin) {
-  try {
-    if (!asin) asin = url.match(/\/(?:dp|gp\/product|gp\/aw\/d)\/([A-Z0-9]{10})/i)?.[1]
-    if (asin) return `amazon:${asin.toUpperCase()}`
-    const u = new URL(url)
-    const p = u.pathname.replace(/\/collections\/[^/]+(?=\/products\/)/, '').replace(/\/+$/, '')
-    return `${u.hostname.replace(/^www\./, '').toLowerCase()}${p.toLowerCase()}`
-  } catch {
-    return url
+// Adds a store listing to the site without review only when every check passes. Anything
+// it can't confirm is left on the Candidates tab for a person.
+function autoApprove(c, { check, asin, price }) {
+  const reasons = []
+  const product = productsById.get(c.product_id)
+  if (c.kind !== 'new_store') reasons.push('new product (needs dosage and sodium details on the Products tab)')
+  else if (!product) reasons.push(`couldn't match it to a listed product${c.product_id ? ` ("${c.product_id}")` : ''}`)
+  if (c.confidence !== 'high') reasons.push(`${c.confidence} confidence`)
+  if (!(c.doses_per_pack > 0)) reasons.push('doses per pack not stated')
+  if (check.inStock === false) reasons.push('out of stock')
+  if (product && c.alginate_mg_per_dose != null && product.algMg &&
+      Math.abs(c.alginate_mg_per_dose - product.algMg) / product.algMg > MG_TOLERANCE) {
+    reasons.push(`alginate ${c.alginate_mg_per_dose} mg doesn't match the listed product's ${product.algMg} mg`)
   }
+  const isAmazon = Boolean(asin) || isAmazonUrl(c.url)
+  if (isAmazon && !asin) reasons.push('no Amazon product ID in the link')
+  if (!isAmazon && price == null) reasons.push('no price to compare')
+  if (price != null && c.doses_per_pack > 0 && product) {
+    const best = bestPerDose.get(product.id)
+    const pd = price / c.doses_per_pack
+    if (best && pd > best * MAX_PRICE_RATIO) reasons.push(`$${pd.toFixed(2)}/dose vs $${best.toFixed(2)} already listed`)
+  }
+  return { ok: reasons.length === 0, reasons }
 }
 
 // Drops links that 404; reads the real price from Shopify stores. Amazon blocks
@@ -281,12 +324,23 @@ async function announce(rows) {
   }
   const sheet = process.env.SHEET_EDIT_URL ? `[Candidates tab](${process.env.SHEET_EDIT_URL})` : 'Candidates tab of the sheet'
   await gh('POST', '/issues', {
-    title: `${rows.length} possible new product${rows.length === 1 ? '' : 's'} (${today})`,
+    title: `Product discovery ${today}: ${rows.filter(isAuto).length} added, ${rows.filter(r => !isAuto(r)).length} to review`,
     labels: [LABEL],
-    body: `The weekly search found these. They're on the ${sheet}; mark each one Approve or Reject there. ` +
-      'To list one on the site, add it to the Products and Offers tabs (or ask Claude to).\n\n' +
-      rows.map(r => `- **${r[1]}**, ${r[2]}${r[4] ? `, ${r[4]}` : ''}${r[6] !== '' ? `, ${r[6]} mg alginate per dose` : ''}\n  ${r[3]}`).join('\n'),
+    body: announcement(rows, sheet),
   })
+}
+
+const isAuto = r => r[7].startsWith('AUTO-ADDED')
+
+function announcement(rows, sheet) {
+  const line = r => `- **${r[1]}**, ${r[2]}${r[4] ? `, ${r[4]}` : ''}${r[6] !== '' ? `, ${r[6]} mg alginate per dose` : ''}\n  ${r[3]}`
+  const auto = rows.filter(isAuto)
+  const review = rows.filter(r => !isAuto(r))
+  return [
+    auto.length && `### Added to the site\nThese passed every check (same product, high confidence, in stock, competitive price) and go live on the next price check. To undo one, mark it **Reject** on the ${sheet}.\n\n${auto.map(line).join('\n')}`,
+    review.length && `### Needs your review\nTo list one, add it to the Products and Offers tabs (or ask Claude to). Mark the rest Reject on the ${sheet}.\n\n` +
+      review.map(r => `${line(r)}\n  _${r[7].match(/^NEEDS REVIEW: ([^.]*)/)?.[1] ?? ''}_`).join('\n'),
+  ].filter(Boolean).join('\n\n')
 }
 
 async function readJson(file) {

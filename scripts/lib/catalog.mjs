@@ -66,3 +66,52 @@ export const isAmazonUrl = url => /(^|\.)(amazon\.com|amzn\.to|a\.co)$/i.test(ne
 
 // Offers are matched across runs by URL + variant, since that's what identifies a listing.
 export const offerKey = o => `${o.url}#${o.variant ?? ''}`
+
+// Two links point at the same listing if they share an ASIN, or the same host + path
+// (ignoring query strings, "www.", and Shopify's /collections/<x>/ prefix).
+export function listingKey(url, asin) {
+  try {
+    if (!asin) asin = url.match(/\/(?:dp|gp\/product|gp\/aw\/d)\/([A-Z0-9]{10})/i)?.[1]
+    if (asin) return `amazon:${asin.toUpperCase()}`
+    const u = new URL(url)
+    const p = u.pathname.replace(/\/collections\/[^/]+(?=\/products\/)/, '').replace(/\/+$/, '')
+    return `${u.hostname.replace(/^www\./, '').toLowerCase()}${p.toLowerCase()}`
+  } catch {
+    return url
+  }
+}
+
+// ── Auto-added offers ─────────────────────────────────────────────────────────
+// The weekly discovery job adds store listings it's confident about to auto-offers.csv
+// on the data branch (it can't write to the sheet). The price checker lists them
+// alongside the Offers tab. Marking one "Reject" on the Candidates tab removes it.
+export const AUTO_OFFERS_HEADER = ['Added', 'Product ID', 'Retailer', 'Pack Size', 'Doses', 'URL', 'Variant']
+
+export async function readAutoOffers(file) {
+  let text
+  try { text = await readFile(file, 'utf8') } catch { return [] }
+  return parseCSVObjects(text).filter(r => r['URL']).map(r => ({
+    productId: r['Product ID'],
+    retailer:  r['Retailer'],
+    packSize:  r['Pack Size'],
+    doses:     toInt(r['Doses']),
+    url:       r['URL'],
+    variant:   r['Variant'] || null,
+  }))
+}
+
+// Listing keys of Candidates-tab rows marked Reject. Needs the tab published as CSV;
+// returns null if it can't be read.
+export async function readRejectedKeys(source) {
+  if (!source) return null
+  try {
+    return new Set(parseCSVObjects(await readSource(source))
+      .filter(r => {
+        const status = Object.entries(r).find(([k]) => /^status/i.test(k))?.[1] ?? ''   // header is "Status (pick Approve / Reject)"
+        return /^reject/i.test(status) && r['URL']
+      })
+      .map(r => listingKey(r['URL'])))
+  } catch {
+    return null
+  }
+}

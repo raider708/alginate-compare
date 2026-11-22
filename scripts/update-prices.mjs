@@ -11,13 +11,14 @@
 //   --prev <dir>       previous output, for history and change alerts
 //   --products <src>   Products tab: published CSV URL or file (default: $SHEET_PRODUCTS_CSV_URL)
 //   --offers <src>     Offers tab: published CSV URL or file (default: $SHEET_OFFERS_CSV_URL)
+//   --candidates <src> Candidates tab, to drop auto-added offers marked Reject (default: $SHEET_CANDIDATES_CSV_URL)
 //   --debug-amazon     print raw Creators API responses
 
 import { mkdir, readFile, writeFile, appendFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { parseArgs } from 'node:util'
-import { loadCatalog, isAmazonUrl, offerKey } from './lib/catalog.mjs'
+import { loadCatalog, isAmazonUrl, offerKey, listingKey, readAutoOffers, readRejectedKeys } from './lib/catalog.mjs'
 import { fetchShopifyOffer } from './lib/shopify.mjs'
 import { resolveAsin, fetchAmazonPrices, checkAmazonLink } from './lib/amazon.mjs'
 import { parseCSV, toCSV } from './lib/csv.mjs'
@@ -31,6 +32,7 @@ const { values: args } = parseArgs({
     prev:           { type: 'string' },
     products:       { type: 'string', default: process.env.SHEET_PRODUCTS_CSV_URL },
     offers:         { type: 'string', default: process.env.SHEET_OFFERS_CSV_URL },
+    candidates:     { type: 'string', default: process.env.SHEET_CANDIDATES_CSV_URL },
     'debug-amazon': { type: 'boolean', default: false },
   },
 })
@@ -65,6 +67,22 @@ try {
   }
 }
 const problems = [...catalog.problems]
+
+// Listings the discovery job added on its own (auto-offers.csv). The Offers tab wins if a
+// listing is on both; a Reject on the Candidates tab takes one off the site.
+const autoOffers = args.prev ? await readAutoOffers(path.join(args.prev, 'auto-offers.csv')) : []
+if (autoOffers.length) {
+  const rejected = await readRejectedKeys(args.candidates)
+  if (!rejected) problems.push({ key: 'catalog:candidates-unreadable', message: 'Couldn\'t read the Candidates tab, so a Reject there won\'t remove an auto-added listing. In the sheet: File → Share → Publish to web → include the Candidates tab, then set the SHEET_CANDIDATES_CSV_URL repo variable.' })
+  const listed = new Set(catalog.offers.map(o => listingKey(o.url, prevOffers.get(offerKey(o))?.asin)))
+  const ids = new Set(catalog.products.map(p => p.id))
+  for (const o of autoOffers) {
+    const k = listingKey(o.url)
+    if (listed.has(k) || rejected?.has(k) || !ids.has(o.productId)) continue
+    listed.add(k)
+    catalog.offers.push({ ...o, auto: true })
+  }
+}
 
 // ── Offers ────────────────────────────────────────────────────────────────────
 const results = []
@@ -132,7 +150,7 @@ if (amazon.status === 'ok') {
     o.linkStatus = linkStatus.get(o.asin)
     if (o.linkStatus === 'dead') {
       o.error = 'Amazon listing not found (404)'
-      problems.push({ key: `amazon-dead:${o.key}`, message: `Amazon — ${o.productId} (${o.packSize}): listing is gone (404). Find a replacement and update the Offers tab. ${o.url}` })
+      problems.push({ key: `amazon-dead:${o.key}`, message: `Amazon — ${o.productId} (${o.packSize}): listing is gone (404). ${o.auto ? "It was auto-added; mark it Reject on the Candidates tab." : "Find a replacement and update the Offers tab."} ${o.url}` })
     }
   }
 }
@@ -157,7 +175,8 @@ await writeFile(path.join(args.out, 'vercel.json'), JSON.stringify({ git: { depl
 await writeFile(path.join(args.out, 'README.md'),
   '# Price data\n\nWritten automatically by `scripts/update-prices.mjs` on the `main` branch. Do not edit by hand.\n\n' +
   '- `latest.json`: the current snapshot the site reads\n- `history.csv`: price and stock changes over time (store-site prices only; Amazon prices are not stored, per Associates rules)\n' +
-  '- `candidates.csv`: possible new products found by `scripts/discover-products.mjs` (shown on the sheet\'s Candidates tab)\n')
+  '- `candidates.csv`: possible new products found by `scripts/discover-products.mjs` (shown on the sheet\'s Candidates tab)\n' +
+  '- `auto-offers.csv`: store listings the discovery job added to the site by itself (mark one Reject on the Candidates tab to remove it)\n')
 await writeHistory()
 
 // ── Report ────────────────────────────────────────────────────────────────────
